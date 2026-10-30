@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 const vm = require('node:vm');
 const { classify, routeEnquiry, maskSensitive } = require('../classifier.js');
@@ -171,6 +172,31 @@ test('static shell stays relative, local-only and free of external assets', () =
   assert.equal(/\/api\//.test(html), false);
 });
 
+test('all local HTML and Markdown links and script/style assets resolve', () => {
+  for (const name of fs.readdirSync(root).filter(file => file.endsWith('.html'))) {
+    const html = fs.readFileSync(path.join(root, name), 'utf8');
+    for (const [, reference] of html.matchAll(/\b(?:href|src)=["']([^"']+)["']/gi)) {
+      if (/^(?:https?:|mailto:|tel:|#|data:|javascript:)/i.test(reference)) continue;
+      const local = reference.split(/[?#]/, 1)[0];
+      if (!local) continue;
+      assert.ok(fs.existsSync(path.resolve(root, local)), `${name} has a missing local reference: ${reference}`);
+    }
+  }
+  const markdownFiles = [
+    ...fs.readdirSync(root).filter(file => file.endsWith('.md')).map(file => path.join(root, file)),
+    ...fs.readdirSync(path.join(root, 'docs')).filter(file => file.endsWith('.md')).map(file => path.join(root, 'docs', file)),
+  ];
+  for (const file of markdownFiles) {
+    const markdown = fs.readFileSync(file, 'utf8');
+    for (const [, reference] of markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      if (/^(?:https?:|mailto:|tel:|#)/i.test(reference)) continue;
+      const local = reference.split(/[?#]/, 1)[0];
+      if (!local) continue;
+      assert.ok(fs.existsSync(path.resolve(path.dirname(file), local)), `${path.relative(root, file)} has a missing link: ${reference}`);
+    }
+  }
+});
+
 test('message focus and same-view navigation preserve the typing position', () => {
   const windowMock = { location: { hash: '#inbox' }, scrolls: [], scrollTo(...args) { this.scrolls.push(args); } };
   const documentMock = {
@@ -206,6 +232,11 @@ test('service worker refreshes same-origin assets and retains offline cache fall
   for (const asset of ['./upgrade.css', './views.js', './ruleslab.js', './safety-net.js', './data/evaluation_fixtures.js']) {
     assert.ok(worker.includes(`'${asset}'`), `offline precache includes ${asset}`);
   }
+  const assetList = worker.match(/const ASSETS = \[([\s\S]*?)\];/);
+  assert.ok(assetList);
+  for (const [, asset] of assetList[1].matchAll(/'([^']+)'/g)) {
+    assert.ok(fs.existsSync(path.resolve(root, asset)), `service worker precache target exists: ${asset}`);
+  }
 });
 
 test('masking removes identifiers and never removes the 000 instruction', () => {
@@ -222,6 +253,14 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
   const { server } = require('../server.js');
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
+  const portCollision = spawnSync(process.execPath, [path.join(root, 'server.js')], {
+    env: { ...process.env, PORT: String(server.address().port) },
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+  assert.equal(portCollision.status, 1);
+  assert.match(portCollision.stderr, /already in use/i);
+  assert.doesNotMatch(portCollision.stderr, /Unhandled 'error' event/);
   const post = async (route, body) => {
     const response = await fetch(`${base}${route}`, {
       method: 'POST',
@@ -274,10 +313,33 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
     const oversized = await post('/api/enquiries', { message: 'x'.repeat(2001) });
     assert.equal(oversized.status, 400);
 
+    const oversizedBody = await fetch(`${base}/api/enquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'x'.repeat(25000) }),
+    });
+    assert.equal(oversizedBody.status, 413);
+    assert.deepEqual(await oversizedBody.json(), { error: 'Request is too large.' });
+    const malformedBody = await fetch(`${base}/api/enquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{invalid json',
+    });
+    assert.equal(malformedBody.status, 400);
+    assert.deepEqual(await malformedBody.json(), { error: 'Please send valid JSON.' });
+
     const traversal = await fetch(`${base}/%2e%2e%2fpackage.json`);
     assert.equal(traversal.status, 403);
+
+    fs.appendFileSync(process.env.CLINIC_EVENT_FILE, 'not-json\n');
+    const corruptHistory = await fetch(`${base}/api/history`);
+    assert.equal(corruptHistory.status, 500);
+    assert.deepEqual(await corruptHistory.json(), { error: 'The local demo could not process that request.' });
+    const afterCorruption = await fetch(`${base}/`);
+    assert.equal(afterCorruption.status, 200, 'a malformed local event log does not crash the server');
   } finally {
     await new Promise(resolve => server.close(resolve));
     delete process.env.CLINIC_EVENT_FILE;
+    fs.rmSync(directory, { recursive: true, force: true });
   }
 });

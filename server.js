@@ -87,11 +87,19 @@ function sendJson(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
+function sendApiError(response, error) {
+  const status = Number.isInteger(error && error.statusCode) ? error.statusCode : 500;
+  const message = status < 500 ? error.message : 'The local demo could not complete that request.';
+  sendJson(response, status, { error: message });
+}
+
 function readJson(request) {
   return new Promise((resolve, reject) => {
     const declared = Number(request.headers['content-length'] || 0);
     if (declared > MAX_BODY_BYTES) {
-      reject(new Error('Request is too large.'));
+      const error = new Error('Request is too large.');
+      error.statusCode = 413;
+      reject(error);
       return;
     }
     let body = '';
@@ -101,7 +109,9 @@ function readJson(request) {
       body += chunk;
       if (Buffer.byteLength(body, 'utf8') > MAX_BODY_BYTES) {
         settled = true;
-        reject(new Error('Request is too large.'));
+        const error = new Error('Request is too large.');
+        error.statusCode = 413;
+        reject(error);
       }
     });
     request.on('end', () => {
@@ -109,7 +119,9 @@ function readJson(request) {
       try {
         resolve(JSON.parse(body || '{}'));
       } catch {
-        reject(new Error('Please send valid JSON.'));
+        const error = new Error('Please send valid JSON.');
+        error.statusCode = 400;
+        reject(error);
       }
     });
     request.on('error', reject);
@@ -144,7 +156,7 @@ function handleApi(request, response, pathname) {
         ...routing,
       });
       sendJson(response, 201, event);
-    }).catch(error => sendJson(response, 400, { error: error.message }));
+    }).catch(error => sendApiError(response, error));
     return;
   }
 
@@ -165,7 +177,7 @@ function handleApi(request, response, pathname) {
       }
       const event = appendEvent({ type: 'emergency_acknowledged', id: acknowledgement[1], acknowledgedBy: acknowledgedBy.trim() });
       sendJson(response, 201, event);
-    }).catch(error => sendJson(response, 400, { error: error.message }));
+    }).catch(error => sendApiError(response, error));
     return;
   }
 
@@ -187,7 +199,7 @@ function handleApi(request, response, pathname) {
       }
       const event = appendEvent({ type: 'status_changed', id: statusRoute[1], status, changedBy: staffRole || 'Receptionist' });
       sendJson(response, 201, event);
-    }).catch(error => sendJson(response, 400, { error: error.message }));
+    }).catch(error => sendApiError(response, error));
     return;
   }
 
@@ -258,7 +270,7 @@ function handleApi(request, response, pathname) {
         appendEvent({ type: 'appointment_booked', id: approval[1], slotId, bookedBy: approvedBy.trim() });
       }
       sendJson(response, 201, event);
-    }).catch(error => sendJson(response, 400, { error: error.message }));
+    }).catch(error => sendApiError(response, error));
     return;
   }
 
@@ -281,33 +293,49 @@ function resolveStaticFile(pathname) {
 }
 
 const server = http.createServer((request, response) => {
-  const pathname = new URL(request.url, `http://${request.headers.host || 'localhost'}`).pathname;
-  if (pathname.startsWith('/api/')) return handleApi(request, response, pathname);
-  if (pathname === '/server-mode.js') {
-    response.writeHead(200, securityHeaders('text/javascript; charset=utf-8'));
-    response.end('window.CLINIC_SERVER_MODE = true;\n');
-    return;
-  }
-  const filePath = resolveStaticFile(pathname);
-  if (!filePath) {
-    response.writeHead(403, securityHeaders('text/plain; charset=utf-8')).end('Forbidden');
-    return;
-  }
-  fs.readFile(filePath, (error, content) => {
-    if (error) {
-      response.writeHead(404, securityHeaders('text/plain; charset=utf-8')).end('Not found');
+  try {
+    const pathname = new URL(request.url, `http://${request.headers.host || 'localhost'}`).pathname;
+    if (pathname.startsWith('/api/')) return handleApi(request, response, pathname);
+    if (pathname === '/server-mode.js') {
+      response.writeHead(200, securityHeaders('text/javascript; charset=utf-8'));
+      response.end('window.CLINIC_SERVER_MODE = true;\n');
       return;
     }
-    // The marker tells the shared browser code to use the Node API instead of static storage.
-    const body = path.extname(filePath) === '.html'
-      ? content.toString('utf8').replace('</head>', '<script src="/server-mode.js"></script></head>')
-      : content;
-    response.writeHead(200, securityHeaders(mimeTypes[path.extname(filePath)] || 'application/octet-stream'));
-    response.end(body);
-  });
+    const filePath = resolveStaticFile(pathname);
+    if (!filePath) {
+      response.writeHead(403, securityHeaders('text/plain; charset=utf-8')).end('Forbidden');
+      return;
+    }
+    fs.readFile(filePath, (error, content) => {
+      if (error) {
+        response.writeHead(404, securityHeaders('text/plain; charset=utf-8')).end('Not found');
+        return;
+      }
+      // The marker tells the shared browser code to use the Node API instead of static storage.
+      const body = path.extname(filePath) === '.html'
+        ? content.toString('utf8').replace('</head>', '<script src="/server-mode.js"></script></head>')
+        : content;
+      response.writeHead(200, securityHeaders(mimeTypes[path.extname(filePath)] || 'application/octet-stream'));
+      response.end(body);
+    });
+  } catch {
+    if (response.destroyed || response.headersSent) {
+      response.destroy();
+      return;
+    }
+    sendJson(response, 500, { error: 'The local demo could not process that request.' });
+  }
 });
 
 if (require.main === module) {
+  server.on('error', error => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use. Stop the other server or choose a different PORT.`);
+    } else {
+      console.error(`The local demo could not start: ${error.message}`);
+    }
+    process.exitCode = 1;
+  });
   server.listen(port, '127.0.0.1', () => console.log(`Clinic Enquiry Desk running at http://localhost:${port}`));
 }
 

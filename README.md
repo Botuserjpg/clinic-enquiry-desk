@@ -75,7 +75,14 @@ Requires Node.js 18 or newer. There are no package dependencies.
 npm start
 ```
 
-Open <http://localhost:3000>. Set `PORT` to use a different port.
+Open <http://localhost:3000>. If port 3000 is already in use, PowerShell can start the demo on another port:
+
+```powershell
+$env:PORT = "3001"
+npm start
+```
+
+Then open <http://localhost:3001>. The server reports a clear error if the selected port is occupied.
 
 ## Run the static demo locally
 
@@ -104,7 +111,7 @@ The root `index.html`, `.nojekyll`, relative asset paths and static-mode fallbac
 | Assessment criterion | Where to look | Evidence |
 | --- | --- | --- |
 | Practical AI use | [AI_USAGE.md](AI_USAGE.md) and runtime classifier | Runtime uses explicit deterministic rules; AI-assisted implementation and verification are documented, with owner reflection left for the owner. |
-| Prompt engineering and iteration | [PROMPTS.md](PROMPTS.md), [prompt_history/](prompt_history/), [Prompt Lab](prompt-lab.html) | Existing prompt provenance is retained; missing originals remain marked for the owner rather than reconstructed. |
+| Prompt engineering and iteration | [Saved round 3 prompt](prompt_history/03_wow_prompt.md), [Prompt Lab](prompt-lab.html) | One verbatim prompt is saved; the owner’s `PROMPTS.md` log is missing from this checkout and must be restored from their records. |
 | Approach and prior knowledge | [Architecture](docs/architecture.md), [Assumptions](docs/assumptions.md) | Rule order, browser/server split, data flow and synthetic assumptions are described. |
 | Challenges and fixes | [BUILD_LOG.md](BUILD_LOG.md), especially **Wow round**, **Upgrade round**, and **Final round** | Records actual defects and remedies, including the manifest CORS issue and Chrome DevTools timeout. |
 | Creativity and usefulness | Auto-demo, Decision Pipeline, simulator, Rules Lab, FAQ and Trust Center | Controls are linked to real local rules, evaluation artifacts and synthetic operational data. |
@@ -150,7 +157,7 @@ python -m pytest -q
 Current results (recorded from real runs in the final working session):
 
 - `node --check` on every project JavaScript file: **all passed**.
-- `npm test`: **21/21 passed**.
+- `npm test`: **22/22 passed** (last local audit).
 - `python -m unittest discover -s tests -v`: **23/23 passed**.
 - `python -m pytest -q`: **23 passed, 12 subtests passed**.
 - Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
@@ -177,7 +184,7 @@ Use only fictional examples. Never enter real patient, health, or personal infor
 These are intentionally left for the project owner and are not fabricated here:
 
 - Write your own reflections on the build.
-- Add the original prompt history for rounds 01 and 02 if you have it; the originals were not present in this repository. `PROMPTS.md` contains a summary, and `prompt_history/03_wow_prompt.md` is saved.
+- Restore the deleted `PROMPTS.md` from your own records and add the original prompts for rounds 01 and 02 only if you can retrieve them. Do not invent their text. `prompt_history/03_wow_prompt.md` remains saved.
 - Record the 2+ minute demo video in your own words, following `VIDEO_SCRIPT.md`.
 - Add the video link to `SUBMISSION_EMAIL.md`.
 - Open the live URL in an incognito window and run the auto-demo once.
