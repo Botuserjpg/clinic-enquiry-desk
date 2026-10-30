@@ -111,7 +111,7 @@ The root `index.html`, `.nojekyll`, relative asset paths and static-mode fallbac
 | Assessment criterion | Where to look | Evidence |
 | --- | --- | --- |
 | Practical AI use | [AI_USAGE.md](AI_USAGE.md) and runtime classifier | Runtime uses explicit deterministic rules; AI-assisted implementation and verification are documented, with owner reflection left for the owner. |
-| Prompt engineering and iteration | [Saved round 3 prompt](prompt_history/03_wow_prompt.md), [Prompt Lab](prompt-lab.html) | One verbatim prompt is saved; the owner’s `PROMPTS.md` log is missing from this checkout and must be restored from their records. |
+| Prompt engineering and iteration | [PROMPTS.md](PROMPTS.md), [Saved round 3 prompt](prompt_history/03_wow_prompt.md), [Prompt Lab](prompt-lab.html) | PROMPTS.md records factual summaries and marks unavailable original prompts for the owner; the round 3 prompt is saved verbatim. |
 | Approach and prior knowledge | [Architecture](docs/architecture.md), [Assumptions](docs/assumptions.md) | Rule order, browser/server split, data flow and synthetic assumptions are described. |
 | Challenges and fixes | [BUILD_LOG.md](BUILD_LOG.md), especially **Wow round**, **Upgrade round**, and **Final round** | Records actual defects and remedies, including the manifest CORS issue and Chrome DevTools timeout. |
 | Creativity and usefulness | Auto-demo, Decision Pipeline, simulator, Rules Lab, FAQ and Trust Center | Controls are linked to real local rules, evaluation artifacts and synthetic operational data. |
@@ -184,7 +184,7 @@ Use only fictional examples. Never enter real patient, health, or personal infor
 These are intentionally left for the project owner and are not fabricated here:
 
 - Write your own reflections on the build.
-- Restore the deleted `PROMPTS.md` from your own records and add the original prompts for rounds 01 and 02 only if you can retrieve them. Do not invent their text. `prompt_history/03_wow_prompt.md` remains saved.
+- Add the original prompts for rounds 01 and 02 to `PROMPTS.md` only if you can retrieve them. Do not invent their text. `prompt_history/03_wow_prompt.md` remains saved.
 - Record the 2+ minute demo video in your own words, following `VIDEO_SCRIPT.md`.
 - Add the video link to `SUBMISSION_EMAIL.md`.
 - Open the live URL in an incognito window and run the auto-demo once.

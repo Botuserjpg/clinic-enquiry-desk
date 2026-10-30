@@ -27,7 +27,7 @@ Evaluation regenerates `docs/evaluation_metrics.js` alongside the JSON and Markd
 
 ## Incremental audit (2026-10-30)
 
-Added regressions for occupied-port startup, malformed/oversized API bodies, corrupt event-history handling, service-worker asset existence and local-document links. The project’s README, prompt lab and Prompt Lab summary no longer link to the owner-deleted `PROMPTS.md`; the owner’s prompt log remains un-restored and must come from their own records. CI now runs pytest as well as unittest. Latest run after these updates: see the Final round entry in `BUILD_LOG.md` for verified command results.
+Added regressions for occupied-port startup, malformed/oversized API bodies, corrupt event-history handling, service-worker asset existence and local-document links. Commit `1babb27` accidentally deleted `PROMPTS.md`; this follow-up restores its exact prior Git contents without adding or inventing prompt text, and reconnects the app and documentation to the restored file. CI runs pytest as well as unittest.
 
 The initial browser harness attempts failed before page navigation because the sandbox blocked the browser's GPU process and closed DevTools sockets. Running the browser outside the sandbox succeeded. The current checkout passes the real pointer/focus scroll test in both `file://` and local server modes. The published Pages deployment still runs an older build and fails that same test; this is a deployment-state blocker, not a failure of the current checked-out source.
 
