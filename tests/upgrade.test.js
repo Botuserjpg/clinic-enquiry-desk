@@ -250,9 +250,13 @@ test('message focus and same-view navigation preserve the typing position', () =
 
 test('service worker refreshes same-origin assets and retains offline cache fallback', () => {
   const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(worker, /clinic-mission-control-v2/);
+  assert.match(worker, /clinic-enquiry-desk-v3/);
+  assert.match(worker, /key\.startsWith\(CACHE_PREFIX\) \|\| LEGACY_CACHES\.has\(key\)/);
+  assert.match(worker, /const cacheMatch = key => caches\.open\(CACHE\)\.then\(cache => cache\.match\(key\)\)/);
+  assert.doesNotMatch(worker, /caches\.match\(/, 'offline fallback must read only this app cache');
   assert.match(worker, /fetch\(request, \{ cache: 'no-cache' \}\)/);
-  assert.match(worker, /fetchAndCache\(\)\.catch\(\(\) => caches\.match\(request\)\)/);
+  assert.match(worker, /fetchAndCache\(\)\.catch\(\(\) => cacheMatch\(request\)\)/);
+  assert.match(worker, /cached \|\| cacheMatch\('\.\/index\.html'\)/);
   assert.match(worker, /url\.pathname\.includes\('\/api\/'\)/);
   for (const asset of ['./upgrade.css', './views.js', './ruleslab.js', './safety-net.js', './data/evaluation_fixtures.js']) {
     assert.ok(worker.includes(`'${asset}'`), `offline precache includes ${asset}`);
@@ -262,6 +266,29 @@ test('service worker refreshes same-origin assets and retains offline cache fall
   for (const [, asset] of assetList[1].matchAll(/'([^']+)'/g)) {
     assert.ok(fs.existsSync(path.resolve(root, asset)), `service worker precache target exists: ${asset}`);
   }
+});
+
+test('service worker activation preserves unrelated origin caches', async () => {
+  const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  const listeners = {};
+  const deleted = [];
+  const cacheNames = ['unrelated-project-cache', 'clinic-mission-control-v2', 'clinic-enquiry-desk-v2', 'clinic-enquiry-desk-v3'];
+  const scope = {
+    addEventListener: (type, callback) => { listeners[type] = callback; },
+    clients: { claim: async () => {} },
+    skipWaiting: async () => {},
+    location: { origin: 'https://example.test' },
+  };
+  const cacheStorage = {
+    keys: async () => cacheNames,
+    delete: async name => { deleted.push(name); return true; },
+  };
+  vm.runInNewContext(worker, { self: scope, caches: cacheStorage, fetch: async () => ({ ok: true, clone: () => ({}) }) });
+  let activation;
+  listeners.activate({ waitUntil: promise => { activation = promise; } });
+  await activation;
+  assert.deepEqual(deleted.sort(), ['clinic-enquiry-desk-v2', 'clinic-mission-control-v2']);
+  assert.equal(deleted.includes('unrelated-project-cache'), false);
 });
 
 test('masking removes identifiers and never removes the 000 instruction', () => {

@@ -144,5 +144,5 @@ Open **Safety â†’ Trust Center â†’ Run self-tests** to see fresh PASS/
 - The classifier over-triages look-alike phrases on purpose. The evaluation report lists the errors instead of hiding them.
 - Approval records a human decision. No message is sent, and there is no integration with email, SMS or emergency services.
 - The audit chain detects some edits. It is not a security boundary and is not production-grade audit storage.
-- The service worker is HTTPS-only. On `file://` the app runs without it.
+- The service worker is HTTPS-only. On `file://` the app runs without it. Activation cleans up only this app's versioned caches (plus its named legacy cache), and offline fallbacks read only this app's cache, preserving other projects' offline data on the shared host.
 

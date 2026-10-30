@@ -1,5 +1,7 @@
-/* Static-only service worker for Clinic Mission Control. It never caches /api/. */
-const CACHE = 'clinic-mission-control-v2';
+/* Static-only, scope-namespaced service worker. It never caches /api/. */
+const CACHE_PREFIX = 'clinic-enquiry-desk-';
+const CACHE = 'clinic-enquiry-desk-v3';
+const LEGACY_CACHES = new Set(['clinic-mission-control-v2']);
 const ASSETS = [
   './',
   './index.html',
@@ -42,7 +44,8 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE
+        && (key.startsWith(CACHE_PREFIX) || LEGACY_CACHES.has(key))).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -61,14 +64,15 @@ self.addEventListener('fetch', event => {
       .then(cache => cache.put(request, copy).catch(() => {}))
       .then(() => response);
   });
+  const cacheMatch = key => caches.open(CACHE).then(cache => cache.match(key));
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetchAndCache()
-        .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
+        .catch(() => cacheMatch(request).then(cached => cached || cacheMatch('./index.html')))
     );
     return;
   }
 
-  event.respondWith(fetchAndCache().catch(() => caches.match(request)));
+  event.respondWith(fetchAndCache().catch(() => cacheMatch(request)));
 });
