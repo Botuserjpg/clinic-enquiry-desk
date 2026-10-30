@@ -185,6 +185,8 @@ test('FHIR-shaped export is labelled illustrative and CSV escapes text', () => {
   assert.ok(hostileCsv.includes('"\'+SUM(A1:A2)"'));
   assert.ok(hostileCsv.includes('"\'-1+2"'));
   assert.ok(hostileCsv.includes('"\'\t=HYPERLINK(""https://attacker.example"",""open"")"'));
+  const controlPrefixCsv = extras.toCsv([{ ...event, message: '\u0000=SUM(A1:A2)' }]);
+  assert.ok(controlPrefixCsv.includes('"\'\u0000=SUM(A1:A2)"'));
 });
 
 test('reply studio helpers block medical advice, score readability and diff edits', () => {

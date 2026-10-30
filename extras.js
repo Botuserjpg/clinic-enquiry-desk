@@ -274,7 +274,7 @@
     ]);
     const escape = value => {
       const text = String(value === undefined || value === null ? '' : value);
-      const safeText = typeof value === 'string' && /^[\s\uFEFF]*[=+\-@]/.test(text) ? `'${text}` : text;
+      const safeText = typeof value === 'string' && /^[\s\u0000-\u001F\u007F-\u00A0\uFEFF]*[=+\-@]/.test(text) ? `'${text}` : text;
       return `"${safeText.replace(/"/g, '""')}"`;
     };
     return [header, ...rows].map(row => row.map(escape).join(',')).join('\r\n');
