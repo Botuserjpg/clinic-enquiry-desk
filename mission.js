@@ -560,22 +560,32 @@
   function renderCommands(query = '') {
     const list = $('#command-list');
     if (!list) return;
-    const normalized = query.trim().toLowerCase();
+    const normalized = query.trim().slice(0, 120).toLowerCase();
     filteredCommands = commandDefinitions().filter(command => !normalized || `${command.label} ${command.hint}`.toLowerCase().includes(normalized));
     selectedCommand = Math.min(selectedCommand, Math.max(0, filteredCommands.length - 1));
     list.replaceChildren();
     if (!filteredCommands.length) {
       const item = document.createElement('li');
       item.className = 'command-item';
+      item.id = 'command-no-results';
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-disabled', 'true');
+      item.setAttribute('aria-selected', 'false');
       item.textContent = query.trim().length >= 2
         ? 'No matching command or enquiry. Enquiry search checks this browser’s local history only.'
         : 'No matching command.';
       list.append(item);
+      const input = $('#command-input');
+      if (input) {
+        input.setAttribute('aria-expanded', 'true');
+        input.setAttribute('aria-activedescendant', item.id);
+      }
       return;
     }
     filteredCommands.forEach((command, index) => {
       const item = document.createElement('li');
       item.className = 'command-item';
+      item.id = `command-option-${index}`;
       item.setAttribute('role', 'option');
       item.setAttribute('aria-selected', String(index === selectedCommand));
       const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -593,9 +603,16 @@
       item.addEventListener('mouseenter', () => {
         selectedCommand = index;
         [...list.children].forEach((child, childIndex) => child.setAttribute('aria-selected', String(childIndex === index)));
+        const input = $('#command-input');
+        if (input) input.setAttribute('aria-activedescendant', item.id);
       });
       list.append(item);
     });
+    const input = $('#command-input');
+    if (input) {
+      input.setAttribute('aria-expanded', 'true');
+      input.setAttribute('aria-activedescendant', `command-option-${selectedCommand}`);
+    }
   }
 
   function openPalette() {
@@ -614,6 +631,11 @@
   function closePalette() {
     const modal = $('#command-palette');
     if (modal) modal.hidden = true;
+    const input = $('#command-input');
+    if (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+    }
     const open = $('#command-open');
     if (open) open.focus();
   }
@@ -810,6 +832,11 @@
   if (commandBackdrop) commandBackdrop.addEventListener('click', closePalette);
   const commandInput = $('#command-input');
   if (commandInput) {
+    commandInput.placeholder = 'Search commands or local enquiries';
+    commandInput.setAttribute('aria-label', 'Search commands or enquiries in local history');
+    commandInput.setAttribute('role', 'combobox');
+    commandInput.setAttribute('aria-autocomplete', 'list');
+    commandInput.maxLength = 120;
     commandInput.addEventListener('input', () => { selectedCommand = 0; renderCommands(commandInput.value); });
     commandInput.addEventListener('keydown', event => {
       if (event.key === 'ArrowDown') {

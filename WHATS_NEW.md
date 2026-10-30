@@ -12,7 +12,7 @@ A factual cheat sheet for the Max-upgrade round. Every number below is produced 
 
 ## Search your local enquiry history
 
-From any app view, press **Ctrl+K** (or **/** outside a text field). Type at least two characters from an enquiry ID, category, priority or masked message text. Select an **Open [ID]** result to return to **Inbox** and reopen that saved enquiry with its existing emergency and approval state. Results come only from this browser's current local history; no request is made. Result text is inserted as text, so script-like messages are not interpreted as markup.
+From any app view, press **Ctrl+K** (or **/** outside a text field). Type at least two characters from an enquiry ID, category, priority or masked message text. Select an **Open [ID]** result to return to **Inbox** and reopen that saved enquiry with its existing emergency and approval state. Results come only from this browser's current local history; no request is made. Result text is inserted as text, so script-like messages are not interpreted as markup. The search uses combobox/listbox semantics, announces the active result for arrow-key navigation, and limits the query to 120 characters.
 
 ## Local server request boundary
 

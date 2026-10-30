@@ -127,6 +127,10 @@ test('command palette enquiry search finds recent local records and returns safe
   assert.equal(extras.searchEnquiries('routine', events, 1).length, 1);
   const mission = fs.readFileSync(path.join(root, 'mission.js'), 'utf8');
   assert.match(mission, /label\.textContent = command\.label/);
+  assert.match(mission, /setAttribute\('role', 'combobox'\)/);
+  assert.match(mission, /Search commands or local enquiries/);
+  assert.match(mission, /setAttribute\('aria-activedescendant'/);
+  assert.match(mission, /commandInput\.maxLength = 120/);
   assert.doesNotMatch(mission, /item\.innerHTML = `\$\{command\.label\}/);
 });
 
