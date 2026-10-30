@@ -61,6 +61,7 @@ async function waitForChrome() {
 }
 
 let socket;
+let debugTarget = '(not connected)';
 let nextId = 1;
 const pending = new Map();
 const events = [];
@@ -75,7 +76,7 @@ function send(method, params = {}) {
     const timeout = setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);
-        reject(new Error(`CDP timeout: ${method}`));
+        reject(new Error(`CDP timeout: ${method}; WebSocket state=${socket?.readyState}; target=${debugTarget}; recent events=${events.slice(-8).join(', ') || 'none'}`));
       }
     }, 30000);
     pending.set(id, {
@@ -122,7 +123,10 @@ async function main() {
   await waitForChrome();
   const created = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT' });
   const target = await created.json();
+  debugTarget = target.webSocketDebuggerUrl || '(missing debugger URL)';
   socket = new WebSocket(target.webSocketDebuggerUrl);
+  socket.addEventListener('close', event => events.push(`WebSocket close ${event.code}${event.reason ? `: ${event.reason}` : ''}`));
+  socket.addEventListener('error', () => events.push('WebSocket error'));
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true });
     socket.addEventListener('error', reject, { once: true });

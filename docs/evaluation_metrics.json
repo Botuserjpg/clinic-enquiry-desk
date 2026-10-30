@@ -229,9 +229,9 @@
     }
   },
   "latency": {
-    "total_ms": 53.23,
-    "mean_ms": 0.0355,
-    "per_1000_ms": 35.49,
+    "total_ms": 51.18,
+    "mean_ms": 0.0341,
+    "per_1000_ms": 34.12,
     "note": "Single local Python process, no network or model call. Timings vary by machine."
   },
   "worst_errors": [
