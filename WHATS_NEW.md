@@ -10,6 +10,10 @@ A factual cheat sheet for the Max-upgrade round. Every number below is produced 
 **Run locally:** `npm start` then open <http://localhost:3000>  
 **Static test:** open `index.html` directly, or serve any subfolder on GitHub Pages.
 
+## Automatic GitHub Pages publishing
+
+On each push to `main`, `.github/workflows/pages.yml` publishes the static site through GitHub Pages. Initial setup click path: repository **Settings → Pages → Build and deployment → Source → GitHub Actions**. The live deployment from commit `f63c459` passed the browser check: focusing the Inbox composer and selecting the active view both preserved scroll; static mode made zero API or external requests and had no console errors.
+
 ## Search your local enquiry history
 
 From any app view, press **Ctrl+K** (or **/** outside a text field). Type at least two characters from an enquiry ID, category, priority or masked message text. Select an **Open [ID]** result to return to **Inbox** and reopen that saved enquiry with its existing emergency and approval state. Results come only from this browser's current local history; no request is made. Result text is inserted as text, so script-like messages are not interpreted as markup. The search uses combobox/listbox semantics, announces the active result for arrow-key navigation, and limits the query to 120 characters.

@@ -100,8 +100,8 @@ The current public demo is at <https://botuserjpg.github.io/clinic-enquiry-desk/
 
 1. Push the repository to a public GitHub repository.
 2. In the repository, open **Settings → Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Select the `main` branch and the `/ (root)` folder, then save.
+3. Under **Build and deployment**, choose **GitHub Actions** as the source.
+4. The workflow at `.github/workflows/pages.yml` uploads the repository's static files and deploys on every push to `main`.
 5. Open the published `https://<account>.github.io/<repository>/` URL in an incognito window and submit one of the fictional examples.
 
 The root `index.html`, `.nojekyll`, relative asset paths and static-mode fallback are already present.
