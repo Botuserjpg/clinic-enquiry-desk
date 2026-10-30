@@ -1,51 +1,278 @@
 <!doctype html>
-<html lang="en-AU">
+<html lang="en-AU" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#153a34">
-  <meta name="description" content="Synthetic-data clinic enquiry triage prototype. Demonstration only, not medical advice.">
-  <link rel="icon" href="data:,">
-  <title>Clinic Enquiry Desk</title>
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Clinic Mission Control: a synthetic-data, explainable clinic enquiry triage demo. Not medical advice.">
+  <link rel="icon" href="icons/clinic-icon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <title>Clinic Mission Control — synthetic triage demo</title>
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="./" aria-label="Clinic Enquiry Desk home"><span class="brand-mark">C</span><span>clinic<span class="brand-light">desk</span></span></a><span class="demo-tag"><span class="pulse"></span><span id="mode-label">LOCAL DEMO</span></span></header>
-  <main class="layout">
-    <section class="intro">
-      <div><p class="eyebrow">GENERAL PRACTICE <span>/</span> FRONT DESK</p><h1>Enquiry<br><em>workspace.</em></h1><p class="intro-copy">A considered first look at what came through the door.</p><p class="clinic-name" id="clinic-name"></p></div>
-      <aside class="safety"><div class="safety-icon" aria-hidden="true">!</div><div><strong>Demonstration only</strong><p>Use fictional examples. Never enter real patient, health, or personal information. This tool does not provide medical advice.</p><small>Immediate danger? Call <b>000</b>.</small></div></aside>
-    </section>
-    <section class="metrics" aria-label="Enquiry summary">
-      <article class="metric"><span class="metric-label">TOTAL ENQUIRIES</span><strong id="metric-total">0</strong><span class="metric-note">in local history</span></article>
-      <article class="metric"><span class="metric-label">NEEDS REVIEW</span><strong id="metric-review">0</strong><span class="metric-note">awaiting staff approval</span></article>
-      <article class="metric"><span class="metric-label">EMERGENCY FLAGS</span><strong id="metric-emergency">0</strong><span class="metric-note">phrase match · check now</span></article>
-      <article class="metric date-metric"><span class="metric-label">TODAY</span><strong id="today">—</strong><span class="metric-note">local device time</span></article>
-    </section>
-    <div class="workbench">
-      <section class="card intake-card">
-        <div class="card-heading"><div><p class="eyebrow">01 <span>/</span> INTAKE</p><h2>New enquiry</h2></div><span class="icon-bubble" aria-hidden="true">↗</span></div>
-        <p class="muted">Paste a fictional message below. The rules will show their working.</p>
-        <div class="examples"><span class="field-label">TRY AN EXAMPLE</span><button class="example" type="button" data-example="Hi, could I book an appointment next week?"><span>01</span> Appointment</button><button class="example" type="button" data-example="I have chest pain and feel short of breath."><span>02</span> Emergency wording</button><button class="example" type="button" data-example="Could someone call me about my blood test results?"><span>03</span> Test results</button></div>
-        <form id="intake-form"><label class="field-label" for="message">MESSAGE <span class="optional">· fictional only</span></label><textarea id="message" name="message" maxlength="2000" placeholder="Type or paste a fictional enquiry…" required></textarea><div class="field-foot"><span id="char-count">0 / 2,000</span><button class="button button-primary" type="submit">Triage enquiry <span aria-hidden="true">→</span></button></div></form>
-      </section>
-      <section class="card result-card" id="result-card" aria-live="polite">
-        <div class="card-heading"><div><p class="eyebrow">02 <span>/</span> TRIAGE</p><h2>Decision &amp; reply</h2></div><span class="icon-bubble" aria-hidden="true">⌁</span></div>
-        <div class="empty-state" id="empty-state"><span class="empty-mark">✳</span><p>Your triage will appear here.</p><small>Category, priority, phrase matches, routing, and a staff-review draft.</small></div>
-        <div id="result-content" hidden></div>
-      </section>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9 4h6v5h5v6h-5v5H9v-5H4V9h5z"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 13h4l2 3h4l2-3h4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-5"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H13a5 5 0 0 1 0 10H8"/><path d="M10 13l-2 3 2 3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 17H3z"/><path d="M12 9v5"/><circle cx="12" cy="17.2" r=".8" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M14 7l5 5-5 5"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></symbol>
+    <symbol id="i-command" viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15a8.5 8.5 0 0 1-11-11 8.5 8.5 0 1 0 11 11z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5"/><rect x="4" y="8" width="16" height="9" rx="2"/><path d="M7 17v4h10v-4"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="Clinic Mission Control home">
+        <span class="brand-mark"><svg class="icon"><use href="#i-cross"></use></svg></span>
+        <span class="brand-text">clinic<span>mission control</span></span>
+      </a>
+      <nav class="topnav" aria-label="Primary">
+        <a href="#dashboard">Dashboard</a>
+        <a href="handover.html">Handover</a>
+        <a href="prompt-lab.html">Prompt lab</a>
+        <a href="safety.html">Safety</a>
+        <a href="limits.html">Limits</a>
+      </nav>
+      <div class="status-strip" aria-label="Live status">
+        <span class="status-pill status-mode" id="mode-label">STATIC DEMO</span>
+        <span class="status-pill"><svg class="icon"><use href="#i-clock"></use></svg><span id="clock">--:--</span></span>
+        <span class="status-pill" id="hours-pill">Checking hours</span>
+        <span class="status-pill">Queue <b id="queue-size">0</b></span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-button" id="command-open" type="button" aria-label="Open command palette (Ctrl+K)" title="Command palette (Ctrl+K)">
+          <svg class="icon"><use href="#i-command"></use></svg>
+        </button>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <svg class="icon icon-moon"><use href="#i-moon"></use></svg>
+          <svg class="icon icon-sun" hidden><use href="#i-sun"></use></svg>
+        </button>
+      </div>
     </div>
-    <section class="card history-card">
-      <div class="history-heading"><div><p class="eyebrow">03 <span>/</span> AUDIT TRAIL</p><h2>Recent activity</h2><p class="muted" id="storage-note">Events are appended locally and linked by a hash chain.</p></div><div class="history-actions"><button class="button button-quiet" id="verify-integrity" type="button">Verify integrity</button><button class="button button-quiet" id="simulate-day" type="button">Simulate clinic day</button><button class="button button-quiet" id="refresh-history" type="button">↻ Refresh</button></div></div>
-      <div class="integrity-status" id="integrity-status" role="status" aria-live="polite"></div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><svg class="icon"><use href="#i-shield"></use></svg> CLINIC MISSION CONTROL <span class="eyebrow-dot"></span> SYNTHETIC DATA ONLY</p>
+        <h1 id="hero-title">Every enquiry,<br><em>routed with care.</em></h1>
+        <p class="lede">A transparent triage workspace for fictional GP clinic enquiries. Emergency wording wins. A human approves every reply.</p>
+        <div class="hero-actions">
+          <button class="button button-primary" id="auto-demo" type="button"><svg class="icon"><use href="#i-play"></use></svg> Watch the 60-second auto-demo</button>
+          <button class="button button-secondary" id="sim-start" type="button">Start live simulation</button>
+          <a class="button button-ghost" href="#dashboard">Open dashboard <svg class="icon"><use href="#i-arrow"></use></svg></a>
+        </div>
+        <div class="hero-stats" aria-label="Live queue summary">
+          <div class="hero-stat"><span>Queue</span><strong id="hero-queue">0</strong><small>awaiting approval</small></div>
+          <div class="hero-stat"><span>Emergency</span><strong id="hero-emergency">0</strong><small>phrase matches</small></div>
+          <div class="hero-stat"><span>SLA breaches</span><strong id="hero-sla">0</strong><small>computed</small></div>
+        </div>
+      </div>
+      <aside class="safety-card" aria-label="Safety notice">
+        <div class="safety-icon"><svg class="icon"><use href="#i-alert"></use></svg></div>
+        <div>
+          <strong>Demonstration only</strong>
+          <p>Use fictional examples. Never enter real patient, health, or personal information. This tool does not provide medical advice.</p>
+          <p class="safety-emergency">Immediate danger? Call <b>000</b>.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="workspace-grid" aria-label="Enquiry workspace">
+      <section class="panel intake-panel" aria-labelledby="intake-title">
+        <div class="panel-heading">
+          <div><p class="eyebrow">01 / INTAKE</p><h2 id="intake-title">New enquiry</h2></div>
+          <span class="icon-bubble"><svg class="icon"><use href="#i-inbox"></use></svg></span>
+        </div>
+        <p class="muted">Paste a fictional message. The rules show their working.</p>
+        <div class="examples" aria-label="Example messages">
+          <button class="example" type="button" data-example="Hi, could I book an appointment next week?"><span>01</span> Appointment</button>
+          <button class="example" type="button" data-example="I have chest pain and feel short of breath."><span>02</span> Emergency wording</button>
+          <button class="example" type="button" data-example="Could someone call me about my blood test results?"><span>03</span> Test results</button>
+        </div>
+        <form id="intake-form">
+          <label class="field-label" for="message">MESSAGE <span class="optional">· fictional only</span></label>
+          <textarea id="message" name="message" maxlength="2000" placeholder="Type or paste a fictional enquiry…" required></textarea>
+          <div class="field-foot">
+            <span id="char-count">0 / 2,000</span>
+            <button class="button button-primary" type="submit">Triage enquiry <svg class="icon"><use href="#i-arrow"></use></svg></button>
+          </div>
+        </form>
+        <div class="voice-row">
+          <button class="button button-quiet" id="voice-input" type="button" hidden><svg class="icon"><use href="#i-mic"></use></svg> Voice input</button>
+          <span class="muted small" id="voice-note">Voice input appears if your browser supports it.</span>
+        </div>
+      </section>
+
+      <section class="panel pipeline-panel" id="pipeline" aria-labelledby="pipeline-title">
+        <div class="panel-heading">
+          <div><p class="eyebrow">02 / DECISION PIPELINE</p><h2 id="pipeline-title">Explainable triage</h2></div>
+          <span class="icon-bubble"><svg class="icon"><use href="#i-route"></use></svg></span>
+        </div>
+        <div id="pipeline-visual" class="pipeline-visual" aria-live="polite">
+          <div class="empty-state" id="empty-state">
+            <span class="empty-mark"><svg class="icon"><use href="#i-spark"></use></svg></span>
+            <p>Your triage will appear here.</p>
+            <small>Each stage shows the exact rule, phrase, role and SLA that fired.</small>
+          </div>
+          <div id="result-content" hidden></div>
+        </div>
+        <div class="pipeline-controls" id="pipeline-controls" hidden>
+          <button class="button button-quiet" id="pipeline-prev" type="button">← Previous</button>
+          <button class="button button-quiet" id="pipeline-replay" type="button">↻ Replay</button>
+          <button class="button button-quiet" id="pipeline-next" type="button">Next →</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">03 / MISSION CONTROL</p>
+          <h2 id="dashboard-title">Clinic pulse</h2>
+          <p class="muted">Every number below is computed from the local event log unless labelled as an assumption.</p>
+        </div>
+        <div class="dashboard-actions">
+          <label class="sim-control" for="sim-speed">Simulation speed <input id="sim-speed" type="range" min="1" max="10" value="3" step="1"><output id="sim-speed-value" for="sim-speed">3×</output></label>
+          <button class="button button-secondary" id="sim-pause" type="button" hidden>Pause simulation</button>
+          <button class="button button-quiet" id="sim-reset" type="button" hidden>Stop</button>
+        </div>
+      </div>
+
+      <div id="emergency-strip" class="emergency-strip" hidden>
+        <svg class="icon"><use href="#i-alert"></use></svg>
+        <span><b id="emergency-strip-count">0</b> emergency phrase match(es) awaiting acknowledgement.</span>
+        <button class="button button-danger" id="emergency-strip-open" type="button">Open oldest</button>
+      </div>
+
+      <div class="metrics-grid">
+        <article class="metric"><span>TOTAL ENQUIRIES</span><strong id="metric-total">0</strong><small>in local history</small></article>
+        <article class="metric"><span>NEEDS REVIEW</span><strong id="metric-review">0</strong><small>awaiting approval</small></article>
+        <article class="metric"><span>EMERGENCY FLAGS</span><strong id="metric-emergency">0</strong><small>phrase match · check now</small></article>
+        <article class="metric"><span>SLA BREACHES</span><strong id="metric-sla">0</strong><small>computed from timestamps</small></article>
+        <article class="metric"><span>MEDIAN TTFP</span><strong id="metric-ttfp">—</strong><small>time to first approval</small></article>
+        <article class="metric"><span>APPROVALS</span><strong id="metric-approvals">0</strong><small>human actions</small></article>
+      </div>
+
+      <div class="dashboard-grid">
+        <section class="panel swimlanes-panel" aria-labelledby="swimlanes-title">
+          <div class="panel-heading"><div><p class="eyebrow">ROLE ROUTING</p><h3 id="swimlanes-title">Queue swimlanes</h3></div><span class="icon-bubble"><svg class="icon"><use href="#i-user"></use></svg></span></div>
+          <div id="swimlanes" class="swimlanes"></div>
+        </section>
+
+        <section class="panel timeline-panel" aria-labelledby="timeline-title">
+          <div class="panel-heading"><div><p class="eyebrow">ARRIVALS</p><h3 id="timeline-title">Arrival timeline</h3></div><span class="icon-bubble"><svg class="icon"><use href="#i-clock"></use></svg></span></div>
+          <div id="arrival-timeline" class="arrival-timeline"></div>
+        </section>
+
+        <section class="panel chart-panel" aria-labelledby="heatmap-title">
+          <h3 id="heatmap-title">Hourly heatmap</h3>
+          <svg id="chart-heatmap" class="chart" viewBox="0 0 520 120" role="img" aria-label="Enquiries by hour of day"></svg>
+          <p class="chart-note">Enquiries by hour, local device time. Darker cells mean more arrivals.</p>
+        </section>
+
+        <section class="panel chart-panel" aria-labelledby="donut-title">
+          <h3 id="donut-title">Priority mix</h3>
+          <div class="donut-wrap">
+            <svg id="chart-donut" class="chart donut" viewBox="0 0 120 120" role="img" aria-label="Priority mix"></svg>
+            <div id="donut-legend" class="legend"></div>
+          </div>
+        </section>
+
+        <section class="panel chart-panel" aria-labelledby="ageing-title">
+          <h3 id="ageing-title">Backlog ageing</h3>
+          <svg id="chart-ageing" class="chart" viewBox="0 0 520 140" role="img" aria-label="Unapproved enquiries by age"></svg>
+          <p class="chart-note">Unapproved enquiries by age bucket.</p>
+        </section>
+
+        <section class="panel chart-panel" aria-labelledby="sla-title">
+          <h3 id="sla-title">SLA health</h3>
+          <svg id="chart-sla" class="chart" viewBox="0 0 200 120" role="img" aria-label="SLA health gauge"></svg>
+          <p class="chart-note" id="sla-note">Computed from event timestamps.</p>
+        </section>
+
+        <section class="panel assumption-panel" aria-labelledby="assumption-title">
+          <h3 id="assumption-title">Manual vs triage-assisted</h3>
+          <label for="minutes-per-enquiry">Staff minutes per enquiry <output id="minutes-value" for="minutes-per-enquiry">6</output></label>
+          <input id="minutes-per-enquiry" type="range" min="1" max="20" value="6" step="1">
+          <div class="assumption-result" id="time-saved" aria-live="polite"></div>
+          <p class="assumption-note">Illustrative assumption: triage reduces staff time by 40%. This is not a measured result.</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel audit-panel" id="audit" aria-labelledby="audit-title">
+      <div class="panel-heading">
+        <div><p class="eyebrow">04 / AUDIT TRAIL</p><h2 id="audit-title">Recent activity</h2><p class="muted" id="storage-note">Events are appended locally and linked by a hash chain.</p></div>
+        <div class="history-actions">
+          <button class="button button-quiet" id="verify-integrity" type="button">Verify integrity</button>
+          <button class="button button-quiet" id="simulate-day" type="button">Simulate clinic day</button>
+          <button class="button button-quiet" id="refresh-history" type="button">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="integrity-wrap">
+        <div id="integrity-status" class="integrity-status" role="status" aria-live="polite"></div>
+        <div id="integrity-chain" class="integrity-chain" aria-label="Hash chain blocks"></div>
+        <button class="button button-danger-quiet" id="simulate-tamper" type="button">Simulate tamper (display only)</button>
+      </div>
       <div class="history-list" id="history-list"><p class="history-empty">No activity yet.</p></div>
     </section>
-    <footer><span>LOCAL DEMONSTRATION · NO EXTERNAL SERVICES</span><span>Synthetic roster · role routing · SLA targets · staff judgement always comes first.</span></footer>
   </main>
+
+  <footer class="site-footer">
+    <div><span class="footer-brand">clinic mission control</span><span>Local demonstration · no external services</span></div>
+    <div class="footer-links"><a href="handover.html">Shift handover</a><a href="prompt-lab.html">Prompt lab</a><a href="safety.html">Safety case</a><a href="limits.html">Limits</a></div>
+    <p class="footer-note">Rules are illustrative. Staff judgement always comes first. Immediate danger: call 000.</p>
+  </footer>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal" id="command-palette" hidden>
+    <div class="modal-backdrop" data-close-command></div>
+    <div class="command-card" role="dialog" aria-modal="true" aria-labelledby="command-title">
+      <div class="command-head">
+        <svg class="icon"><use href="#i-search"></use></svg>
+        <input id="command-input" type="text" placeholder="Type a command…" autocomplete="off" aria-label="Search commands" aria-controls="command-list" aria-expanded="true">
+        <button class="icon-button" id="command-close" type="button" aria-label="Close command palette"><svg class="icon"><use href="#i-x"></use></svg></button>
+      </div>
+      <p class="sr-only" id="command-title">Command palette</p>
+      <ul id="command-list" class="command-list" role="listbox" aria-label="Commands"></ul>
+      <p class="command-hint">↑ ↓ to move · Enter to run · Esc to close</p>
+    </div>
+  </div>
+
+  <div class="demo-overlay" id="demo-overlay" hidden>
+    <div class="demo-card" role="dialog" aria-modal="true" aria-labelledby="demo-title" aria-describedby="demo-caption">
+      <div class="demo-head">
+        <span class="demo-badge">AUTO-DEMO</span>
+        <span id="demo-step-label">Step 1 / 6</span>
+        <button class="button button-quiet" id="demo-skip" type="button">Skip demo</button>
+      </div>
+      <div class="demo-progress"><span id="demo-progress-bar"></span></div>
+      <h2 id="demo-title">A 60-second tour of the safety logic</h2>
+      <p id="demo-caption" class="demo-caption" aria-live="polite">Starting…</p>
+      <p class="demo-note">All messages are fictional. The demo adds events to the local history. You can skip at any time.</p>
+    </div>
+  </div>
+
   <script src="rules.js" defer></script>
   <script src="config/clinic.js" defer></script>
   <script src="classifier.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="mission.js" defer></script>
 </body>
 </html>

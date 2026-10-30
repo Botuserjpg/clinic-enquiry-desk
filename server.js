@@ -7,7 +7,16 @@ const { classify, routeEnquiry, maskSensitive } = require('./classifier');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 3000);
-const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
+const mimeTypes = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+};
 const dataDirectory = path.join(root, 'data');
 const eventFile = path.join(dataDirectory, 'events.jsonl');
 
@@ -71,6 +80,26 @@ function handleApi(request, response, pathname) {
         ...triage,
         ...routing,
       });
+      sendJson(response, 201, event);
+    }).catch(error => sendJson(response, 400, { error: error.message }));
+    return;
+  }
+  const acknowledgement = pathname.match(/^\/api\/enquiries\/([\w-]+)\/acknowledge$/);
+  if (request.method === 'POST' && acknowledgement) {
+    readJson(request).then(({ acknowledgedBy }) => {
+      if (typeof acknowledgedBy !== 'string' || !acknowledgedBy.trim() || acknowledgedBy.length > 60) {
+        sendJson(response, 400, { error: 'Enter a staff name or initials (up to 60 characters).' });
+        return;
+      }
+      const events = readEvents();
+      const enquiry = events.find(event => event.id === acknowledgement[1] && event.type === 'enquiry_received');
+      if (!enquiry) { sendJson(response, 404, { error: 'Enquiry not found.' }); return; }
+      if (!enquiry.emergency) { sendJson(response, 400, { error: 'Only an emergency phrase match needs this acknowledgement.' }); return; }
+      if (events.some(event => event.type === 'emergency_acknowledged' && event.id === acknowledgement[1])) {
+        sendJson(response, 409, { error: 'This emergency is already acknowledged.' });
+        return;
+      }
+      const event = appendEvent({ type: 'emergency_acknowledged', id: acknowledgement[1], acknowledgedBy: acknowledgedBy.trim() });
       sendJson(response, 201, event);
     }).catch(error => sendJson(response, 400, { error: error.message }));
     return;
