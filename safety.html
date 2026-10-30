@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en-AU" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Plain-English safety case for the Clinic Mission Control synthetic triage demo.">
+  <link rel="icon" href="icons/clinic-icon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <title>Safety case — Clinic Mission Control</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9 4h6v5h5v6h-5v5H9v-5H4V9h5z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15a8.5 8.5 0 0 1-11-11 8.5 8.5 0 1 0 11 11z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 17H3z"/><path d="M12 9v5"/><circle cx="12" cy="17.2" r=".8" fill="currentColor" stroke="none"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="Clinic Mission Control home">
+        <span class="brand-mark"><svg class="icon"><use href="#i-cross"></use></svg></span>
+        <span class="brand-text">clinic<span>mission control</span></span>
+      </a>
+      <nav class="topnav" aria-label="Primary">
+        <a href="./">Dashboard</a>
+        <a href="handover.html">Handover</a>
+        <a href="prompt-lab.html">Prompt lab</a>
+        <a href="safety.html" aria-current="page">Safety</a>
+        <a href="limits.html">Limits</a>
+      </nav>
+      <div class="status-strip"><span class="status-pill status-mode">SAFETY CASE</span><span class="status-pill">Demonstration only</span></div>
+      <div class="topbar-actions">
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <svg class="icon icon-moon"><use href="#i-moon"></use></svg>
+          <svg class="icon icon-sun" hidden><use href="#i-sun"></use></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc-page" id="main">
+    <section class="doc-hero">
+      <p class="eyebrow"><svg class="icon"><use href="#i-shield"></use></svg> SAFETY CASE · PLAIN ENGLISH</p>
+      <h1>Safety is a set of gates, not a claim</h1>
+      <p>This is a demonstration of a triage workflow for fictional enquiries. It is not a medical device, does not diagnose, and does not give medical advice. This page explains the safety choices in the prototype and what they do <em>not</em> prove.</p>
+    </section>
+
+    <div class="doc-callout red"><strong>Immediate danger? Call 000.</strong> The demo tells staff to relay the 000 instruction whenever emergency wording is detected. It does not contact the sender or emergency services.</div>
+
+    <div class="doc-grid">
+      <section class="doc-card">
+        <h2>1 · Emergency wording wins</h2>
+        <p>The red-flag scan runs before category and urgency rules. A match forces the category to <code>Emergency</code>, the priority to <code>Emergency wording</code>, and a relay-now target. The UI shows the exact phrase that fired.</p>
+        <p><strong>Why:</strong> a routine booking rule must never bury a message that says “cannot breathe”.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>2 · A human approves every reply</h2>
+        <p>A draft is prepared, but the reply stays locked behind an explicit staff action. Emergency replies stay locked until the 000 instruction is acknowledged. Approval records a staff name and timestamp; it does <strong>not</strong> send anything.</p>
+        <p><strong>Why:</strong> the prototype supports judgement, it does not replace it.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>3 · Synthetic data only</h2>
+        <p>Every example is fictional. The app masks common phone, email, Medicare-style and date patterns before local storage. There is no account system, no remote database and no runtime model API.</p>
+        <p><strong>Why:</strong> a hiring demo must never become a place where real patient information is entered.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>4 · Local-first and inspectable</h2>
+        <p>Static mode uses <code>localStorage</code> with an in-memory fallback and makes no application network calls. Server mode writes to a local Node file. The audit view links events with a hash chain and can verify it.</p>
+        <p><strong>Why:</strong> reviewers can inspect behaviour without a backend, and the demo still works on GitHub Pages.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>5 · No medical advice</h2>
+        <p>The draft replies are administrative acknowledgements. They do not diagnose, recommend treatment, or tell a person what medication to take. The refill path is routed to a GP and includes an identity checklist, not a clinical decision.</p>
+        <p><strong>Why:</strong> triage is not treatment.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>6 · Accessibility and motion</h2>
+        <p>The app supports keyboard navigation, a skip link, visible focus, a command palette, semantic labels and a light/dark theme. <code>prefers-reduced-motion</code> disables the pulsing emergency glow and stage animations. Read-aloud only runs after a user clicks the button.</p>
+        <p><strong>Why:</strong> a safety tool that some staff cannot use is not safe.</p>
+      </section>
+
+      <section class="doc-card doc-wide">
+        <h2>What this safety case does not claim</h2>
+        <ul>
+          <li>It is not clinical validation, regulatory approval, or evidence of real-world safety.</li>
+          <li>Phrase matching can miss emergencies and can flag benign text. See <a href="limits.html">Limits</a>.</li>
+          <li>The hash chain detects some local edits; it is not a security boundary, authentication system, or tamper-proof audit log.</li>
+          <li>The evaluation numbers describe agreement with a small synthetic fixture, not performance on patients.</li>
+        </ul>
+        <div class="doc-actions">
+          <a class="button button-primary" href="./">Return to mission control</a>
+          <a class="button button-quiet" href="limits.html">Read the limits</a>
+          <a class="button button-quiet" href="docs/safety_notes.md">Detailed safety notes</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div><span class="footer-brand">clinic mission control</span><span>Local demonstration · no external services</span></div>
+    <div class="footer-links"><a href="./">Dashboard</a><a href="handover.html">Handover</a><a href="prompt-lab.html">Prompt lab</a><a href="limits.html">Limits</a></div>
+    <p class="footer-note">Synthetic data only. Staff judgement always comes first. Immediate danger: call 000.</p>
+  </footer>
+</body>
+</html>

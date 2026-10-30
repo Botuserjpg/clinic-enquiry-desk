@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en-AU" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Printable synthetic shift handover for Clinic Mission Control. Demonstration only.">
+  <link rel="icon" href="icons/clinic-icon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <title>Shift handover — Clinic Mission Control</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9 4h6v5h5v6h-5v5H9v-5H4V9h5z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15a8.5 8.5 0 0 1-11-11 8.5 8.5 0 1 0 11 11z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5"/><rect x="4" y="8" width="16" height="9" rx="2"/><path d="M7 17v4h10v-4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-5"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="Clinic Mission Control home">
+        <span class="brand-mark"><svg class="icon"><use href="#i-cross"></use></svg></span>
+        <span class="brand-text">clinic<span>mission control</span></span>
+      </a>
+      <nav class="topnav" aria-label="Primary">
+        <a href="./">Dashboard</a>
+        <a href="handover.html" aria-current="page">Handover</a>
+        <a href="prompt-lab.html">Prompt lab</a>
+        <a href="safety.html">Safety</a>
+        <a href="limits.html">Limits</a>
+      </nav>
+      <div class="status-strip">
+        <span class="status-pill status-mode">STATIC DOCS</span>
+        <span class="status-pill">Synthetic data only</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <svg class="icon icon-moon"><use href="#i-moon"></use></svg>
+          <svg class="icon icon-sun" hidden><use href="#i-sun"></use></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc-page" id="main">
+    <section class="doc-hero">
+      <p class="eyebrow"><svg class="icon"><use href="#i-print"></use></svg> SHIFT HANDOVER · PRINTABLE</p>
+      <h1>Handover report</h1>
+      <p>Counts and rows below are generated from the local event log in this browser. Nothing is fetched from a remote service in static mode. Use fictional data only.</p>
+      <div class="doc-actions no-print">
+        <button class="button button-primary" id="print-handover" type="button"><svg class="icon"><use href="#i-print"></use></svg> Print handover</button>
+        <a class="button button-quiet" href="./">Back to mission control</a>
+      </div>
+    </section>
+
+    <section class="handover-sheet" id="handover-sheet" aria-live="polite">
+      <div class="handover-head">
+        <div>
+          <h2>Clinic Mission Control · synthetic shift handover</h2>
+          <p class="muted small" id="handover-clinic">Riverbend Family Practice (synthetic)</p>
+        </div>
+        <div class="handover-meta">
+          <div id="handover-generated">Generated —</div>
+          <div id="handover-source">Source: local event log</div>
+        </div>
+      </div>
+      <div class="handover-stats">
+        <div class="handover-stat"><span>TOTAL ENQUIRIES</span><strong id="handover-total">0</strong></div>
+        <div class="handover-stat"><span>EMERGENCY FLAGS</span><strong id="handover-emergency">0</strong></div>
+        <div class="handover-stat"><span>OVERDUE</span><strong id="handover-overdue">0</strong></div>
+        <div class="handover-stat"><span>AWAITING APPROVAL</span><strong id="handover-pending">0</strong></div>
+      </div>
+      <div class="handover-list" id="handover-list">
+        <p class="history-empty">Loading local history…</p>
+      </div>
+      <div class="doc-callout red" style="margin-top:14px">Immediate danger? Call <strong>000</strong>. This report is a demonstration, not a clinical record. It does not provide medical advice and must not contain real patient information.</div>
+      <p class="muted small" style="margin-top:10px">Rows are ordered by urgency: emergency phrase matches, overdue enquiries, then other unapproved enquiries. Approval does not send a message.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div><span class="footer-brand">clinic mission control</span><span>Local demonstration · no external services</span></div>
+    <div class="footer-links"><a href="./">Dashboard</a><a href="prompt-lab.html">Prompt lab</a><a href="safety.html">Safety case</a><a href="limits.html">Limits</a></div>
+    <p class="footer-note">Synthetic data only. Staff judgement always comes first. Immediate danger: call 000.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="handover.js" defer></script>
+</body>
+</html>

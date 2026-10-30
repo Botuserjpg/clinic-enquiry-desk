@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en-AU" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Prompt provenance for Clinic Mission Control. Only saved prompts are listed; missing originals are marked TODO.">
+  <link rel="icon" href="icons/clinic-icon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <title>Prompt lab — Clinic Mission Control</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9 4h6v5h5v6h-5v5H9v-5H4V9h5z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15a8.5 8.5 0 0 1-11-11 8.5 8.5 0 1 0 11 11z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="Clinic Mission Control home">
+        <span class="brand-mark"><svg class="icon"><use href="#i-cross"></use></svg></span>
+        <span class="brand-text">clinic<span>mission control</span></span>
+      </a>
+      <nav class="topnav" aria-label="Primary">
+        <a href="./">Dashboard</a>
+        <a href="handover.html">Handover</a>
+        <a href="prompt-lab.html" aria-current="page">Prompt lab</a>
+        <a href="safety.html">Safety</a>
+        <a href="limits.html">Limits</a>
+      </nav>
+      <div class="status-strip"><span class="status-pill status-mode">PROVENANCE</span><span class="status-pill">Synthetic data only</span></div>
+      <div class="topbar-actions">
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <svg class="icon icon-moon"><use href="#i-moon"></use></svg>
+          <svg class="icon icon-sun" hidden><use href="#i-sun"></use></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc-page" id="main">
+    <section class="doc-hero">
+      <p class="eyebrow"><svg class="icon"><use href="#i-spark"></use></svg> PROMPT LAB · HONEST PROVENANCE</p>
+      <h1>Prompts that shaped the build</h1>
+      <p>This page lists the prompt files that actually exist in this repository. Missing originals are marked <strong>TODO (owner)</strong>. No prompts, dates or outcomes are invented.</p>
+    </section>
+
+    <div class="doc-grid">
+      <section class="doc-card doc-wide">
+        <h2>Saved prompt files</h2>
+        <div class="prompt-entry">
+          <h3>03_wow_prompt.md · Mission-control enhancement</h3>
+          <p><strong>Purpose:</strong> Ask for a distinctive clinic mission-control redesign, an explainable Decision Pipeline, a live simulation dashboard, a 60-second auto-demo, PWA assets, printable handover, safety and limits pages, and honest submission documentation while preserving existing tests and safety rules.</p>
+          <p><strong>Outcome:</strong> Implemented in the “Wow round” recorded in <a href="BUILD_LOG.md">BUILD_LOG.md</a>. The prompt is saved verbatim at <a href="prompt_history/03_wow_prompt.md">prompt_history/03_wow_prompt.md</a>. The final checks and commit SHAs are recorded in the build log and <code>FINAL_MESSAGE.txt</code>.</p>
+        </div>
+        <div class="prompt-entry">
+          <h3>02 · Upgrade round prompt</h3>
+          <p><strong>Purpose:</strong> Add shared rules, browser/Python parity, static mode, synthetic fixtures, Python tools and documentation.</p>
+          <p class="todo">TODO (owner): the original prompt text was not saved as a file. A summary exists in <a href="PROMPTS.md">PROMPTS.md</a>; do not treat the summary as a verbatim prompt.</p>
+        </div>
+        <div class="prompt-entry">
+          <h3>01 · Initial project brief</h3>
+          <p><strong>Purpose:</strong> Build the original small clinic enquiry triage prototype.</p>
+          <p class="todo">TODO (owner): the original brief is not present in <code>prompt_history/</code>. Add it if you want a complete audit trail.</p>
+        </div>
+      </section>
+
+      <section class="doc-card">
+        <h2>What changed between rounds</h2>
+        <ul>
+          <li><strong>Initial:</strong> static clinic triage demo with local rules and a draft reply.</li>
+          <li><strong>Upgrade:</strong> shared <code>rules.json</code>, Python parity, static mode, synthetic fixtures and documentation.</li>
+          <li><strong>Wow:</strong> mission-control shell, animated pipeline, dashboard, command palette, auto-demo, PWA assets and printable handover.</li>
+        </ul>
+        <p>The build log records the real problems found in each round, including the live-probe race, the static-mode gap and the PowerShell test-wrapper message.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>Prompt hygiene</h2>
+        <ul>
+          <li>No secrets, credentials or real patient data are stored in prompt files.</li>
+          <li>Runtime triage uses deterministic rules; no model API is called by the app.</li>
+          <li>AI assistance is documented honestly in <a href="AI_USAGE.md">AI_USAGE.md</a>.</li>
+          <li>Reflections and the owner’s own prompt history remain owner TODOs.</li>
+        </ul>
+      </section>
+
+      <section class="doc-card doc-wide">
+        <h2>Reviewer shortcuts</h2>
+        <div class="doc-actions">
+          <a class="button button-primary" href="./">Open mission control</a>
+          <a class="button button-quiet" href="PROMPTS.md">Read PROMPTS.md</a>
+          <a class="button button-quiet" href="AI_USAGE.md">Read AI usage</a>
+          <a class="button button-quiet" href="BUILD_LOG.md">Read build log</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div><span class="footer-brand">clinic mission control</span><span>Local demonstration · no external services</span></div>
+    <div class="footer-links"><a href="./">Dashboard</a><a href="handover.html">Handover</a><a href="safety.html">Safety case</a><a href="limits.html">Limits</a></div>
+    <p class="footer-note">Synthetic data only. Staff judgement always comes first. Immediate danger: call 000.</p>
+  </footer>
+</body>
+</html>

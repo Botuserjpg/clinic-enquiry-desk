@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en-AU" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Known limits of the Clinic Mission Control synthetic triage demo.">
+  <link rel="icon" href="icons/clinic-icon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <title>Limits — Clinic Mission Control</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9 4h6v5h5v6h-5v5H9v-5H4V9h5z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15a8.5 8.5 0 0 1-11-11 8.5 8.5 0 1 0 11 11z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 17H3z"/><path d="M12 9v5"/><circle cx="12" cy="17.2" r=".8" fill="currentColor" stroke="none"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="Clinic Mission Control home">
+        <span class="brand-mark"><svg class="icon"><use href="#i-cross"></use></svg></span>
+        <span class="brand-text">clinic<span>mission control</span></span>
+      </a>
+      <nav class="topnav" aria-label="Primary">
+        <a href="./">Dashboard</a>
+        <a href="handover.html">Handover</a>
+        <a href="prompt-lab.html">Prompt lab</a>
+        <a href="safety.html">Safety</a>
+        <a href="limits.html" aria-current="page">Limits</a>
+      </nav>
+      <div class="status-strip"><span class="status-pill status-mode">LIMITS</span><span class="status-pill">Read before trusting</span></div>
+      <div class="topbar-actions">
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <svg class="icon icon-moon"><use href="#i-moon"></use></svg>
+          <svg class="icon icon-sun" hidden><use href="#i-sun"></use></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc-page" id="main">
+    <section class="doc-hero">
+      <p class="eyebrow"><svg class="icon"><use href="#i-alert"></use></svg> LIMITS · WHAT THIS DEMO CANNOT DO</p>
+      <h1>Honest limits</h1>
+      <p>The prototype is intentionally simple. The list below is part of the design, not a footnote. If this were a real clinic tool, each item would need an owner, a control and a test.</p>
+    </section>
+
+    <div class="doc-grid">
+      <section class="doc-card">
+        <h2>Phrase matching is literal</h2>
+        <p>The classifier checks whether configured phrases appear in the lower-cased message. It has no grammar, context, sentiment or clinical reasoning. “No chest pain” contains “chest pain”, so it is flagged. That is over-triage, not understanding.</p>
+        <p><strong>Mitigation in the demo:</strong> the matched phrase is shown, staff approve every reply, and emergency replies stay locked until acknowledged.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>Negation and look-alikes</h2>
+        <p>“No shortness of breath” and a “chest pain awareness poster” both trip the red-flag rule. The auto-demo deliberately shows these false positives. A production system would need curated patterns, negation handling and clinical governance.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>Multi-intent messages</h2>
+        <p>Only the first matching category in the configured order is reported. A message that asks for a script, an appointment and billing help becomes one category. A human must notice the rest.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>No clinical validation</h2>
+        <p>The evaluation reports 12/12 category, priority and red-flag agreement on a small synthetic fixture, and 4/4 emergency recall (100%). These are rule-consistency checks, not sensitivity, specificity, clinical validation or evidence of safety with real patients.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>No identity, auth or access control</h2>
+        <p>Anyone with the local browser profile can read the history. There is no login, role-based access, encryption at rest, audit of viewers, or secure transport configuration. The hash chain can expose some edits but is not a security boundary.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>Storage can disappear</h2>
+        <p>Static mode keeps events in <code>localStorage</code> and falls back to memory if storage is blocked. Clearing site data, using a private window, or switching browser profiles loses the history. Server mode writes a local JSONL file and is not a database.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>No message is ever sent</h2>
+        <p>Approval records a human decision. The prototype has no email, SMS, phone or messaging integration. This is deliberate: a demo must not contact a real person.</p>
+      </section>
+
+      <section class="doc-card">
+        <h2>No runtime AI</h2>
+        <p>Triage is deterministic and runs locally. There is no model API, no prompt sent to a provider, and no learning from entered text. AI tools were used to help build the project; that is documented in <a href="AI_USAGE.md">AI_USAGE.md</a>.</p>
+      </section>
+
+      <section class="doc-card doc-wide">
+        <h2>What a real deployment would need</h2>
+        <table class="doc-table">
+          <thead><tr><th>Area</th><th>Would need</th></tr></thead>
+          <tbody>
+            <tr><td><b>Clinical safety</b></td><td>Clinical review of red flags, local escalation policy, false-negative testing, incident reporting and a named safety owner.</td></tr>
+            <tr><td><b>Privacy</b></td><td>Data minimisation, access control, retention rules, encryption, audit logging and a privacy impact assessment.</td></tr>
+            <tr><td><b>Operations</b></td><td>Identity verification, queue ownership, SLA reporting, handover process and staff training.</td></tr>
+            <tr><td><b>Engineering</b></td><td>Authenticated backend, durable storage, monitoring, backups, dependency review and a security assessment.</td></tr>
+          </tbody>
+        </table>
+        <div class="doc-actions">
+          <a class="button button-primary" href="./">Return to mission control</a>
+          <a class="button button-quiet" href="safety.html">Read the safety case</a>
+          <a class="button button-quiet" href="docs/assumptions.md">Read assumptions</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div><span class="footer-brand">clinic mission control</span><span>Local demonstration · no external services</span></div>
+    <div class="footer-links"><a href="./">Dashboard</a><a href="handover.html">Handover</a><a href="prompt-lab.html">Prompt lab</a><a href="safety.html">Safety case</a></div>
+    <p class="footer-note">Synthetic data only. Staff judgement always comes first. Immediate danger: call 000.</p>
+  </footer>
+</body>
+</html>

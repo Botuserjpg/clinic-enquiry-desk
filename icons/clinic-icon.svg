@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Clinic Mission Control cross mark">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c1d31"/>
+      <stop offset="1" stop-color="#07111f"/>
+    </linearGradient>
+    <linearGradient id="cross" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#67e8f9"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="24" y="24" width="464" height="464" rx="92" fill="none" stroke="#2dd4bf" stroke-opacity=".28" stroke-width="4"/>
+  <path d="M216 112h80v104h104v80H296v104h-80V296H112v-80h104z" fill="url(#cross)"/>
+  <circle cx="256" cy="256" r="212" fill="none" stroke="#fbbf24" stroke-opacity=".18" stroke-width="3"/>
+</svg>
