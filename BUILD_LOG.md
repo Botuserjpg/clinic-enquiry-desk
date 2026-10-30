@@ -32,3 +32,35 @@ The previous run already established that Git cannot write `.git/index.lock` bec
 - Published `main` to <https://github.com/Botuserjpg/clinic-enquiry-desk> and enabled GitHub Pages from the `main` branch root. The published demo is <https://botuserjpg.github.io/clinic-enquiry-desk/>.
 - The first live browser probe raced the deferred scripts and reported the default `LOCAL DEMO` label with an empty result. I added an explicit wait for `document.readyState === 'complete'`, then re-ran the same interaction test against the live URL. It passed in `STATIC DEMO` mode with no `/api/` requests and no page exceptions.
 
+## Wow round
+
+Work window: 2026-10-30, approximately 15:40–16:20 (local environment time). Feature commits: `c88f18a`, `a7d6d10`, `79f5402`, `be52013`; the documentation commit is the `HEAD` recorded by `git log -1`.
+
+### Starting state and real fixes
+
+- **15:40 · A rewritten shell referenced files that did not exist.** The working tree already had a new `index.html` for the mission-control design, but `styles.css`, `theme.js`, `mission.js`, `manifest.webmanifest`, `sw.js`, the icon files, and the handover/prompt-lab/safety/limits pages were missing. The page would have loaded without its design or interactions. I implemented the missing design system, presentation layer, PWA assets and pages. Commit `c88f18a` covers the shell, design system and pipeline; `a7d6d10` covers the dashboard and interactions; `79f5402` covers the pages and PWA assets.
+- **15:41 · The old `app.js` would throw on the new DOM.** It queried `#today`, which the new shell removed, so the whole module would stop before binding the form. I rewrote `app.js` against the new IDs, kept the existing static/server mode logic, localStorage fallback, masking, approval and hash-chain behaviour, and exposed a small `window.ClinicDesk` API for the presentation layer. Commit `c88f18a`.
+- **15:42 · The emergency acknowledgement had no server endpoint.** The static path could append an `emergency_acknowledged` event locally, but server mode had no matching route. I added `POST /api/enquiries/:id/acknowledge`, validation and duplicate protection, plus the extra static MIME types. Commit `c88f18a`.
+- **15:44 · `file://` produced a manifest CORS console error.** A static `<link rel="manifest">` caused Chrome to report a CORS failure when the page was opened directly. I removed the static manifest links and add the manifest dynamically from `theme.js` only when the page is served over HTTP(S). The `file://` run then reported zero console errors. Commit `c88f18a`.
+- **15:45 · The theme toggle label could be stale.** If a stored light theme was applied before the button existed, the button kept the dark-theme `aria-label`. `bindToggle()` now reapplies the current theme once the button is in the DOM. Commit `c88f18a`.
+- **15:46 · A service worker on localhost would have cached the Node marker.** Registering the static worker on the Node demo could serve a cached HTML file without `CLINIC_SERVER_MODE`, silently switching the demo to static mode. Registration is now HTTPS-only, which keeps GitHub Pages offline support without interfering with the local Node server. Commit `79f5402`.
+
+### Verification notes
+
+- **15:52 · Full auto-demo run.** In static mode from a clean localStorage, the six-step auto-demo ran to completion: five fictional enquiries were stored, the overlay closed, the simulated tamper painted one red block, and no page exceptions were reported. The demo is skippable and the skip path was tested separately.
+- **15:55 · Browser test selector bug (test only).** The approval check initially read the first `.review-note`, which is the emergency acknowledgement note, instead of `.reply-actions .review-note`. The app had approved correctly (`#metric-approvals` was 1); I corrected the test selector and re-ran. This was a verification-script error, not an app defect.
+- **15:58 · Stage animation timing (test only).** A screenshot check after one second saw four of five pipeline stages because the reveal interval is 280 ms. I waited 1.7 seconds before the screenshot. The step-through and replay controls still work; no app change was needed.
+- **16:00 · Port 3000 was occupied by an older Node process.** The first `npm start` failed with `EADDRINUSE`. I stopped the old process, restarted the server, and verified the new acknowledgement and approval routes. This was an environment issue, not a repository bug.
+- **16:05 · Static-mode checks.** Headless Chrome passed at the HTTP root, a subpath (`/New folder/index.html`) and `file://`. All three reported `STATIC DEMO`, zero `/api/` requests and no console errors after the manifest fix.
+- **16:07 · Server-mode checks.** The injected marker produced `SERVER DEMO`; emergency triage, acknowledgement and approval worked through the local API; eight same-origin `/api/` requests were observed; no page exceptions.
+- **16:10 · Screenshot pass.** Headless Chrome captured the hero, Decision Pipeline, emergency gate, dashboard, handover and Prompt Lab. The first pass produced eight images; I kept six to match the requested 4–6 range. Commit `be52013`.
+- **16:12 · Final automated checks.** `node --check` passed for all 10 JavaScript files; `npm test` passed 6/6; `python -m unittest discover -s tests -v` passed 12/12; the evaluation reported 12/12 category, priority and red-flag matches and 4/4 emergency recall. These remain fixture-level rule-consistency checks, not clinical validation.
+
+### Deliberate limits and compromises
+
+- The classifier is still literal phrase matching. The auto-demo deliberately shows a negated emergency and a benign look-alike so reviewers see the over-triage instead of discovering it later. This is documented in `limits.html`.
+- The “manual vs triage-assisted” time saving is an explicit 40% assumption, not a measurement. The dashboard labels it as such.
+- No runtime model API, backend database, authentication or message-sending integration was added. The demo remains local and synthetic.
+- The original prompts for rounds 01 and 02 were not present in the repository, so `PROMPTS.md` and `prompt-lab.html` mark them **TODO (owner)** rather than inventing them.
+
+
