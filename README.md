@@ -2,6 +2,8 @@
 
 A small, local prototype for sorting fictional general-practice clinic enquiries with transparent rules, assigning a synthetic staff role, drafting a reply that a human must approve, and recording a hash-linked activity history.
 
+**Repository:** <https://github.com/Botuserjpg/clinic-enquiry-desk>
+
 This is a demonstration project. It is **not** a medical device, does not diagnose, does not give medical advice, and must not be used with real patient information.
 
 ## What it does
