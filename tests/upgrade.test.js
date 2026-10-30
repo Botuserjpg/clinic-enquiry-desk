@@ -109,6 +109,26 @@ test('exact duplicate detection is advisory and compares masked text without cha
   assert.equal(classify('I have chest pain', rules).emergency, true);
 });
 
+test('command palette enquiry search finds recent local records and returns safe summaries', () => {
+  const events = [
+    { type: 'enquiry_received', id: 'E-OLD', category: 'Appointments', priority: 'Routine', message: 'Could I book Tuesday?', emergency: false },
+    { type: 'status_changed', id: 'E-NEW', status: 'done' },
+    { type: 'enquiry_received', id: 'E-NEW', category: 'Emergency', priority: 'Emergency wording', message: 'I cannot breathe. [phone redacted]', emergency: true },
+    { type: 'enquiry_received', id: 'E-XSS', category: 'General enquiry', priority: 'Routine', message: '<img src=x onerror=alert(1)>', emergency: false },
+  ];
+  assert.deepEqual(extras.searchEnquiries('e-new', events), [{
+    id: 'E-NEW', category: 'Emergency', priority: 'Emergency wording', emergency: true, message: 'I cannot breathe. [phone redacted]',
+  }]);
+  assert.deepEqual(extras.searchEnquiries('Tuesday', events).map(item => item.id), ['E-OLD']);
+  assert.equal(extras.searchEnquiries('breathe', events)[0].emergency, true);
+  assert.deepEqual(extras.searchEnquiries('onerror', events)[0].id, 'E-XSS');
+  assert.deepEqual(extras.searchEnquiries('e', events), []);
+  assert.equal(extras.searchEnquiries('routine', events, 1).length, 1);
+  const mission = fs.readFileSync(path.join(root, 'mission.js'), 'utf8');
+  assert.match(mission, /label\.textContent = command\.label/);
+  assert.doesNotMatch(mission, /item\.innerHTML = `\$\{command\.label\}/);
+});
+
 test('FHIR-shaped export is labelled illustrative and CSV escapes text', () => {
   const event = {
     id: 'EVAL-1',

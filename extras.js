@@ -191,6 +191,30 @@
     return (events || []).find(event => event.type === 'enquiry_received' && event.id !== currentId && normalise(event.message) === target) || null;
   }
 
+  function searchEnquiries(query, events, limit = 5) {
+    const term = String(query || '').trim().slice(0, 120).toLocaleLowerCase('en-AU');
+    if (term.length < 2 || !Array.isArray(events)) return [];
+    const resultLimit = Number.isFinite(limit) ? Math.max(1, Math.min(10, Math.floor(limit))) : 5;
+    const received = events.filter(event => event && event.type === 'enquiry_received');
+    const matches = [];
+    for (let index = received.length - 1; index >= 0 && matches.length < resultLimit; index -= 1) {
+      const event = received[index];
+      const message = typeof event.message === 'string' ? event.message.replace(/\s+/g, ' ').trim() : '';
+      const searchable = [event.id, event.category, event.priority, message]
+        .filter(value => typeof value === 'string').join(' ').toLocaleLowerCase('en-AU');
+      if (searchable.includes(term)) {
+        matches.push({
+          id: String(event.id || ''),
+          category: String(event.category || 'Uncategorised'),
+          priority: String(event.priority || 'Review'),
+          emergency: event.emergency === true,
+          message: message.slice(0, 180),
+        });
+      }
+    }
+    return matches;
+  }
+
   function toFhir(event, config) {
     const approved = Boolean(event.approved);
     const priority = event.priority === 'Emergency wording' ? 'stat' : event.priority === 'Prompt review' ? 'urgent' : 'routine';
@@ -299,6 +323,7 @@
     generateSlots,
     slotIsBooked,
     findDuplicate,
+    searchEnquiries,
     toFhir,
     toCsv,
     spikeSignals,

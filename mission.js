@@ -507,7 +507,7 @@
   // ---------- command palette ----------
   function commandDefinitions() {
     const view = name => () => { if (window.ClinicViews) window.ClinicViews.showView(name); };
-    return [
+    const commands = [
       { label: 'Go to Inbox', hint: 'NAV', icon: 'i-inbox', run: view('inbox') },
       { label: 'Go to Queue', hint: 'NAV', icon: 'i-list', run: view('queue') },
       { label: 'Go to Dashboard', hint: 'NAV', icon: 'i-grid', run: view('dashboard') },
@@ -531,6 +531,30 @@
       { label: 'Open limits', hint: 'PAGE', icon: 'i-shield', run: () => { window.location.href = 'limits.html'; } },
       { label: 'Toggle light / dark theme', hint: 'UI', icon: 'i-sun', run: () => { const button = $('#theme-toggle'); if (button) button.click(); } },
     ];
+    const query = ($('#command-input') || {}).value || '';
+    if (query.trim().length >= 2 && window.ClinicExtras && window.ClinicDesk) {
+      const matches = window.ClinicExtras.searchEnquiries(query, window.ClinicDesk.getEventsCache(), 5);
+      for (const match of matches) {
+        const preview = match.message.length > 76 ? `${match.message.slice(0, 73)}…` : match.message;
+        commands.push({
+          label: `Open ${match.id} · ${match.category}: ${preview}`,
+          hint: match.emergency ? 'EMERGENCY' : 'ENQUIRY',
+          icon: match.emergency ? 'i-alert' : 'i-search',
+          run: () => {
+            const events = window.ClinicDesk.getEventsCache();
+            const enquiry = events.find(event => event.type === 'enquiry_received' && event.id === match.id);
+            if (!enquiry) {
+              window.ClinicDesk.notify('That enquiry is no longer in the local history. Refresh the queue and try again.');
+              return;
+            }
+            const approved = events.some(event => event.type === 'reply_approved' && event.id === match.id);
+            if (window.ClinicViews) window.ClinicViews.showView('inbox');
+            window.ClinicDesk.showResult({ ...enquiry, triggers: enquiry.triggers || enquiry.redFlags || [] }, approved);
+          },
+        });
+      }
+    }
+    return commands;
   }
 
   function renderCommands(query = '') {
@@ -543,7 +567,9 @@
     if (!filteredCommands.length) {
       const item = document.createElement('li');
       item.className = 'command-item';
-      item.textContent = 'No matching command.';
+      item.textContent = query.trim().length >= 2
+        ? 'No matching command or enquiry. Enquiry search checks this browser’s local history only.'
+        : 'No matching command.';
       list.append(item);
       return;
     }
@@ -552,7 +578,17 @@
       item.className = 'command-item';
       item.setAttribute('role', 'option');
       item.setAttribute('aria-selected', String(index === selectedCommand));
-      item.innerHTML = `<svg class="icon" aria-hidden="true"><use href="#${command.icon}"></use></svg><span>${command.label}</span><small>${command.hint}</small>`;
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.classList.add('icon');
+      icon.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', `#${command.icon}`);
+      icon.append(use);
+      const label = document.createElement('span');
+      label.textContent = command.label;
+      const hint = document.createElement('small');
+      hint.textContent = command.hint;
+      item.append(icon, label, hint);
       item.addEventListener('click', () => runCommand(command));
       item.addEventListener('mouseenter', () => {
         selectedCommand = index;

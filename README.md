@@ -28,7 +28,7 @@ The page is designed to be useful in the first 10 seconds: product identity, liv
 - A **Decision Pipeline** that animates the real classifier evidence: emergency scan, category match, priority, route/SLA and the human approval gate. It has replay and step-through controls.
 - A pinned emergency experience: full-width **CALL 000 NOW**, matched phrases, helpline lines, optional browser read-aloud on a user gesture, and a staff acknowledgement gate before the reply unlocks.
 - A mission-control dashboard with a live simulation, arrival timeline, role swimlanes, SLA breach counter, hourly heatmap, priority donut, backlog ageing, SLA gauge, median time-to-first-approval, and a clearly labelled manual-vs-assisted assumption slider. Every number is computed from the local event log unless labelled as an assumption.
-- A command palette (`Ctrl+K` / `/`), optional voice input (feature-detected, hidden when unavailable), and a skippable 60-second auto-demo.
+- A command palette (`Ctrl+K` / `/`) that searches local enquiry IDs, categories, priorities and masked text as well as commands; optional voice input (feature-detected, hidden when unavailable); and a skippable 60-second auto-demo.
 - A Trust Center with user-triggered local self-tests for emergency precedence, recall gate, routing configuration, slot exclusion, privacy masking and the hash primitive; it links the hazard log and a reviewer’s five-minute path.
 - A safety-gated Rules Lab that scores all 1,500 synthetic enquiries in the browser against labels kept in a separate array; the deterministic classifier itself receives no labels.
 - An advisory exact-text duplicate warning that points staff to the earlier record without changing triage priority or emergency handling.
@@ -157,7 +157,7 @@ python -m pytest -q
 Current results (recorded from real runs in the final working session):
 
 - `node --check` on every project JavaScript file: **all passed**.
-- `npm test`: **22/22 passed** (last local audit).
+- `npm test`: **23/23 passed** (last local audit).
 - `python -m unittest discover -s tests -v`: **23/23 passed**.
 - `python -m pytest -q`: **23 passed, 12 subtests passed**.
 - Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
