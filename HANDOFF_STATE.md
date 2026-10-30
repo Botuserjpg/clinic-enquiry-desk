@@ -49,5 +49,5 @@ The three lists above record the state found during the initial audit. The follo
 - Headless Chrome checks passed in static HTTP, static `file://`, and server modes. The static runs made no `/api/` requests and reported no page exceptions.
 - `README.md`, architecture, assumptions, safety notes, build log, and `.gitignore` were updated to match the implementation.
 
-Still owner work: answer the reflections, supply the verbatim prompt history, record the 2+ minute video, push to a public repository, enable GitHub Pages, and send the submission email.
+Published to <https://github.com/Botuserjpg/clinic-enquiry-desk> with GitHub Pages enabled at <https://botuserjpg.github.io/clinic-enquiry-desk/>. Still owner work: answer the reflections, supply the verbatim prompt history, record the 2+ minute video, check the live page in an incognito window, and send the submission email.
 

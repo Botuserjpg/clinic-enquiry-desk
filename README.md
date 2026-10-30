@@ -2,7 +2,8 @@
 
 A small, local prototype for sorting fictional general-practice clinic enquiries with transparent rules, assigning a synthetic staff role, drafting a reply that a human must approve, and recording a hash-linked activity history.
 
-**Repository:** <https://github.com/Botuserjpg/clinic-enquiry-desk>
+**Repository:** <https://github.com/Botuserjpg/clinic-enquiry-desk>  
+**Live static demo:** <https://botuserjpg.github.io/clinic-enquiry-desk/>
 
 This is a demonstration project. It is **not** a medical device, does not diagnose, does not give medical advice, and must not be used with real patient information.
 
@@ -48,6 +49,8 @@ python -m http.server 8000
 Open <http://localhost:8000>. Opening `index.html` directly with `file://` also works in current Chrome and Edge, with history kept in that browser profile.
 
 ## Publish the static demo on GitHub Pages
+
+The current public demo is at <https://botuserjpg.github.io/clinic-enquiry-desk/>. To re-deploy or move it:
 
 1. Push the repository to a public GitHub repository.
 2. In the repository, open **Settings → Pages**.
@@ -110,7 +113,7 @@ These are intentionally left for the project owner and are not fabricated here:
 - Write your own reflections on the build.
 - Replace the prompt summary with your own prompt history.
 - Record the 2+ minute demo video in your own words.
-- Add the public repository and video links to your submission email.
+- Add the video link to your submission email.
 
 ## License
 

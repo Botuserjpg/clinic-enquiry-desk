@@ -18,7 +18,7 @@ The previous run already established that Git cannot write `.git/index.lock` bec
 ### Completion pass
 
 - `git status` initially failed with `fatal: detected dubious ownership` because `.git` is owned by a different Windows account. I added a one-time `safe.directory` exception for this folder and re-ran the command successfully. This changed only Git's global configuration, not project files.
-- The repository had no commits and every file was untracked. After the `safe.directory` fix, the local commit succeeded on `main` (35 files). No push was performed.
+- The repository had no commits and every file was untracked. After the `safe.directory` fix, the local commit succeeded on `main` (35 files). A later push published `main` to the public repository.
 - Static mode was missing even though `docs/safety_notes.md` described it. The app always called `fetch('/api/...')` and used root-absolute asset URLs. I added mode detection, relative asset paths, localStorage with an in-memory fallback, browser hash chaining, a mode badge, and a `.nojekyll` file. I then corrected the safety and architecture docs to describe the implemented behavior.
 - The Node server did not mask stored messages and did not return the stored event (timestamp and hash) to the browser. I updated it to mask structured identifiers, add routing and service-level fields, and return the event so both modes render the same result shape.
 - The evaluation tool and report did not report emergency recall. I added the metric and regenerated the report; it reports 4/4 emergency recall on the synthetic fixture.
@@ -29,4 +29,6 @@ The previous run already established that Git cannot write `.git/index.lock` bec
 - Added routing, service-level targets, identifier masking, a verify-integrity action, and a simulate-clinic-day action. These are documented as synthetic demonstration settings, not clinic policy.
 - Added explicit classifier evidence (matched category term, matched prompt-review word, red-flag phrases, and rule order) to the JavaScript and Python results and to the UI. The parity test now compares the evidence object as well.
 - Verification after the changes: `npm test` passed 6/6; `python -m unittest discover -s tests -v` passed 12/12; `python tools/evaluate.py` reported 12/12 category, priority, and red-flag matches with 4/4 emergency recall. Headless Chrome tests passed in static mode over HTTP and `file://` and in server mode; the static runs made no `/api/` requests and reported no page exceptions.
+- Published `main` to <https://github.com/Botuserjpg/clinic-enquiry-desk> and enabled GitHub Pages from the `main` branch root. The published demo is <https://botuserjpg.github.io/clinic-enquiry-desk/>.
+- The first live browser probe raced the deferred scripts and reported the default `LOCAL DEMO` label with an empty result. I added an explicit wait for `document.readyState === 'complete'`, then re-ran the same interaction test against the live URL. It passed in `STATIC DEMO` mode with no `/api/` requests and no page exceptions.
 
