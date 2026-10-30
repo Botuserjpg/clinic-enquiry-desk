@@ -1,0 +1,222 @@
+FINAL MESSAGE — Clinic Mission Control
+======================================
+
+Repository: https://github.com/Botuserjpg/clinic-enquiry-desk
+Live static demo: https://botuserjpg.github.io/clinic-enquiry-desk/
+Branch: main
+Latest pushed commit at time of writing: 350eb8e
+Documentation commit for this file: see "Git status" below.
+
+A local, explainable triage workspace for FICTIONAL general-practice clinic
+enquiries. Emergency wording always wins and tells staff to relay 000. A human
+approves every reply, and approval never sends anything. This is a
+demonstration, not a medical device, and it must not be used with real patient
+information.
+
+
+1. WHAT CHANGED
+---------------
+
+Design system and shell
+- styles.css — hand-written design system: dark navy / teal / amber / red
+  tokens, light theme, tabular numerals, responsive layout, print styles,
+  prefers-reduced-motion handling, visible focus. No CDN, external font,
+  framework or build step.
+- index.html — mission-control shell: hero, live status strip (mode badge,
+  clinic clock, in-hours state, queue size), intake panel, Decision Pipeline,
+  emergency panel, dashboard, audit/history, footer, command palette and
+  auto-demo overlay. Inline SVG icon sprite.
+- theme.js — theme persistence and toggle, HTTP(S)-only manifest injection,
+  HTTPS-only service-worker registration.
+
+Triage and presentation
+- app.js — rewritten against the new DOM while keeping the existing static and
+  server logic: masking, localStorage with in-memory fallback, hash-linked
+  events, emergency acknowledgement gate, human approval gate, history and
+  integrity rendering, pipeline stage builder, refill identity checklist.
+- mission.js — dashboard and interactions: role swimlanes, arrival timeline,
+  hourly heatmap, priority donut, backlog ageing, SLA gauge, median
+  time-to-first-approval, labelled time-saving assumption, live simulation,
+  command palette (Ctrl+K or /), optional Web Speech voice input, skippable
+  six-step auto-demo, integrity chain.
+- classifier.js — unchanged rule order; exposes matched category term, matched
+  prompt-review word, red-flag phrases and rule order as evidence.
+
+Server
+- server.js — Node standard-library server: static files with extra MIME types,
+  same-origin JSON API, masking, hash chain, and a new
+  POST /api/enquiries/:id/acknowledge route with validation and duplicate
+  protection. Injects the CLINIC_SERVER_MODE marker.
+
+Pages and PWA
+- handover.html, handover.js — printable shift handover sourced from the local
+  event log, ordered by urgency.
+- prompt-lab.html — honest prompt provenance; missing rounds 01/02 are marked
+  TODO (owner), not invented.
+- safety.html — plain-English safety case.
+- limits.html — known limits and what a real deployment would need.
+- manifest.webmanifest, sw.js, icons/clinic-icon.svg,
+  icons/clinic-maskable.svg — PWA assets. The service worker is static-only,
+  never caches /api/, and is registered only on HTTPS.
+
+Docs and submission artefacts
+- README.md — live/repo links, "Try it in 60 seconds", two-mode table, Pages
+  steps, assessment mapping, test counts, screenshots, owner TODOs.
+- BUILD_LOG.md — real problems and fixes under "Wow round", with times and
+  commit SHAs.
+- PROMPTS.md, prompt_history/03_wow_prompt.md — the Wow-round prompt saved
+  verbatim; missing earlier originals marked TODO (owner).
+- AI_USAGE.md — honest AI-use statement plus owner reflection questions.
+- VIDEO_SCRIPT.md — ~3-minute script with [SAY IN YOUR OWN WORDS] placeholders.
+- SUBMISSION_EMAIL.md — email draft to jobs@gokulinfocare.com with a TODO for
+  the video link.
+- docs/screenshots/ — six reviewer screenshots captured from headless Chrome.
+
+
+2. REAL TEST AND EVALUATION NUMBERS
+-----------------------------------
+
+node --check
+- 10/10 JavaScript files passed:
+  app.js, classifier.js, handover.js, mission.js, rules.js, server.js, sw.js,
+  theme.js, config/clinic.js, tests/classifier.test.js
+
+npm test
+- 6/6 passed, 0 failed (node:test, tests/classifier.test.js).
+
+python -m unittest discover -s tests -v
+- 12/12 passed, 0 failed.
+
+python tools/evaluate.py --report docs/evaluation_report.md
+- Rows: 12
+- Category matches: 12/12
+- Priority matches: 12/12
+- Red-flag matches: 12/12
+- All fields match: 12/12
+- Emergency rows: 4; emergency recalled: 4/4 (100%); none missed.
+- Scope: synthetic rule-consistency check only; not clinical validation.
+
+Headless Chrome, static mode
+- HTTP root: STATIC DEMO, 4 swimlanes, 50 chart elements, zero /api/ requests.
+- Static subpath (/New folder/index.html): STATIC DEMO, CSS loaded, zero
+  /api/ requests, no console errors.
+- file://: STATIC DEMO, triage worked, zero /api/ requests, zero console
+  errors after the manifest fix.
+- Appointment flow: category Appointments, priority Prompt review, 5 pipeline
+  stages, reply draft present, queue and totals updated.
+- Emergency flow: CALL 000 NOW, acknowledgement required, reply locked,
+  matched phrases "chest pain" and "cannot breathe", emergency strip visible,
+  stage 1 state OVERRIDE.
+- After acknowledgement: reply unlocked and the emergency strip cleared.
+- Approval: note "Approved by staff · recorded in history · not sent";
+  approvals counter 1; median time-to-first-approval "<1 min".
+- Integrity: passed for 4 events, simulated tamper painted 1 red block,
+  warning text shown, second verify restored the green chain.
+- Dashboard: 4 lanes, timeline rows, 24 heatmap bars, donut segments, ageing
+  bars, SLA gauge text and labelled assumption all rendered.
+- Command palette: opened with Ctrl+K, listed commands, closed with Escape.
+- Auto-demo: opened, caption shown, skipped cleanly.
+- Full auto-demo run from clean localStorage: completed, 5 fictional enquiries
+  stored, overlay closed, 1 simulated tamper block, zero page errors.
+
+Headless Chrome, server mode (localhost:3000)
+- Marker present, label SERVER DEMO, isStatic false.
+- Emergency triage, acknowledgement and approval worked through the local API.
+- 8 same-origin /api/ requests observed; no page exceptions.
+
+Headless Chrome, live GitHub Pages (after the Pages build for 350eb8e
+completed)
+- Title "Clinic Mission Control — synthetic triage demo", mode STATIC DEMO,
+  hero present, 4 swimlanes, manifest linked, CSS applied.
+- Emergency triage showed CALL 000 NOW with the acknowledgement gate and a
+  locked reply; the emergency strip was visible.
+- Command palette opened and closed with the keyboard.
+- Auto-demo started and skipped cleanly.
+- Zero /api/ requests, zero failed requests, zero console errors.
+
+Interpretation
+- These are fixture-level rule-consistency and UI checks. They are not
+  sensitivity, specificity, clinical validation, regulatory approval, or
+  evidence of real-world safety.
+
+
+3. SKIPPED / TODOs (OWNER)
+--------------------------
+
+- Reflections: answer the six questions in AI_USAGE.md in your own words.
+- Prompt history: add the original verbatim prompts for rounds 01 and 02 if you
+  still have them. They were not in the repository, so PROMPTS.md and
+  prompt-lab.html mark them TODO (owner) rather than inventing text.
+- Video: record the 2+ minute walkthrough in your own words using
+  VIDEO_SCRIPT.md, then add the link to SUBMISSION_EMAIL.md.
+- Live incognito check: open the live URL in an incognito window and run the
+  auto-demo once yourself (automated headless check already passed).
+- Email: send the submission to jobs@gokulinfocare.com with the repo, live demo
+  and video links.
+- Optional: re-deploy Pages after any further documentation commit.
+
+Deliberately not built: runtime model API, backend database, authentication,
+access control, encryption at rest, and any message-sending integration.
+
+
+4. GIT STATUS
+-------------
+
+Branch: main
+Feature commits pushed:
+- c88f18a  Step 1-2: mission-control shell, design system and decision pipeline
+- a7d6d10  Step 3-4: dashboard, live simulation, command palette and auto-demo
+- 79f5402  Step 5: PWA assets, printable handover, prompt lab, safety and limits pages
+- be52013  Step 6: capture reviewer screenshots from headless Chrome
+- 350eb8e  Step 6: document prompt history, safety limits and submission checklist
+- da40ae9  (prior) Document public demo URL and Pages deployment
+- b97eb72  (prior) Add public repository link to submission files
+- f68a7ec  (prior) Add explainable classifier evidence and update verification records
+
+GitHub Pages build for 350eb8e completed with status "built".
+The commit that adds this FINAL_MESSAGE.txt and the live-verification note in
+BUILD_LOG.md is recorded in `git log -1` after that commit. Working tree was
+clean before this final documentation edit.
+
+
+5. REVIEWER CHECKLIST
+---------------------
+
+1. Open the live demo in an incognito window:
+   https://botuserjpg.github.io/clinic-enquiry-desk/
+2. Confirm the mode badge says STATIC DEMO and the hero, status strip, safety
+   notice and auto-demo button are visible without scrolling.
+3. Click "Watch the 60-second auto-demo" and let it run, or skip at any step.
+4. Paste "I have chest pain and cannot breathe." and press Triage enquiry.
+   Confirm CALL 000 NOW, the matched phrases, the acknowledgement gate and the
+   locked reply.
+5. Tick the acknowledgement box and record a name; confirm the reply unlocks
+   but is not sent. Approve the draft and confirm the note says "not sent".
+6. Press Ctrl+K (or /) to open the command palette, then open Shift handover
+   and check the counts and rows match the local history.
+7. Run Verify integrity, then Simulate tamper (display only), then Verify
+   integrity again to restore the green chain.
+8. Toggle the light theme and confirm the page remains readable.
+9. Run both modes locally:
+   - Static: `python -m http.server 8000` then open http://localhost:8000
+   - Server: `npm start` then open http://localhost:3000
+   Confirm the static run makes zero /api/ requests and the server run shows
+   SERVER DEMO.
+10. Run the checks: `node --check` on each JS file, `npm test`,
+    `python -m unittest discover -s tests -v`, and
+    `python tools/evaluate.py --report docs/evaluation_report.md`.
+11. Read AI_USAGE.md and add your own reflections.
+12. Add the original prompts for rounds 01/02 if available.
+13. Record the 2+ minute video and add its link to SUBMISSION_EMAIL.md.
+14. Email the repository, live demo and video links to jobs@gokulinfocare.com.
+
+
+6. VERDICT
+----------
+
+READY AFTER MY TODOs
+
+The app, both modes, tests, live Pages site and reviewer flows are working. The
+remaining work is personal and cannot be generated: your reflections, the
+missing original prompts if you have them, the recorded video and link, your own
+incognito run, and sending the email.
