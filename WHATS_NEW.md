@@ -74,7 +74,7 @@ Open **Safety â†’ Trust Center â†’ Run self-tests** to see fresh PASS/
 3. Each row shows priority, assignee, status, **Approved Â· not sent**, and **Ack needed / Acknowledged**.
 4. Click **Audit trail (n)** on a row to see that enquiry's own events and short hashes.
 5. Click **Open** to return to the full result, or **Mark done / Reopen** to change status. The status change is undoable from the toast.
-6. Click **CSV** or **FHIR-shaped JSON** to download the local history. The FHIR file is explicitly labelled illustrative and not validated.
+6. Click **CSV** or **FHIR-shaped JSON** to download the local history. CSV text that could start a spreadsheet formula is prefixed with an apostrophe; the FHIR file is explicitly labelled illustrative and not validated.
 
 ### Dashboard
 

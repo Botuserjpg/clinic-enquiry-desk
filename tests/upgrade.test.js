@@ -174,6 +174,17 @@ test('FHIR-shaped export is labelled illustrative and CSV escapes text', () => {
   const csv = extras.toCsv([event]);
   assert.ok(csv.startsWith('"id","timestamp"'));
   assert.ok(csv.includes('"Could I book, please?"'));
+  const hostileCsv = extras.toCsv([{
+    ...event,
+    id: '=1+1',
+    category: '+SUM(A1:A2)',
+    priority: '-1+2',
+    message: '\t=HYPERLINK("https://attacker.example","open")',
+  }]);
+  assert.ok(hostileCsv.includes('"\'=1+1"'));
+  assert.ok(hostileCsv.includes('"\'+SUM(A1:A2)"'));
+  assert.ok(hostileCsv.includes('"\'-1+2"'));
+  assert.ok(hostileCsv.includes('"\'\t=HYPERLINK(""https://attacker.example"",""open"")"'));
 });
 
 test('reply studio helpers block medical advice, score readability and diff edits', () => {

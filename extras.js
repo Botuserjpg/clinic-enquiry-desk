@@ -272,7 +272,11 @@
       event.approved ? 'yes' : 'no',
       event.message,
     ]);
-    const escape = value => `"${String(value === undefined || value === null ? '' : value).replace(/"/g, '""')}"`;
+    const escape = value => {
+      const text = String(value === undefined || value === null ? '' : value);
+      const safeText = typeof value === 'string' && /^[\s\uFEFF]*[=+\-@]/.test(text) ? `'${text}` : text;
+      return `"${safeText.replace(/"/g, '""')}"`;
+    };
     return [header, ...rows].map(row => row.map(escape).join(',')).join('\r\n');
   }
 
