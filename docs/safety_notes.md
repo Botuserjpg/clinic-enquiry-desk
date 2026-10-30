@@ -4,7 +4,7 @@ This public demo uses synthetic enquiries only. It does not diagnose or provide 
 
 ## Emergency handling
 
-The classifier checks red-flag phrases before category and urgency rules. A red-flag match overrides every other rule, raises Emergency wording, and displays “call 000 now” plus the matching phrase. The prototype cannot contact the sender; staff must relay the instruction immediately. Phrase matching can miss emergencies and can flag ordinary text, so it must not be used to assess safety or clinical urgency.
+The classifier checks red-flag phrases before category and urgency rules. A red-flag match overrides every other rule, raises Emergency wording, and displays “call 000 now” plus the matching phrase. The reply is fixed; both the interface and the Node API reject an emergency approval if the exact 000 instruction is changed, even after acknowledgement. The prototype cannot contact the sender; staff must relay the instruction immediately. Phrase matching can miss emergencies and can flag ordinary text, so it must not be used to assess safety or clinical urgency.
 
 Every reply requires a staff approval action. Approval is an audit event and does not send a message.
 

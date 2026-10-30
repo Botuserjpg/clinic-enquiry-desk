@@ -369,6 +369,10 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
     assert.ok(created.headers.get('content-security-policy').includes("default-src 'self'"));
     const id = created.body.id;
 
+    const blankReply = await post(`/api/enquiries/${id}/approve`, { approvedBy: 'T1', staffRole: 'GP', replyText: '   ' });
+    assert.equal(blankReply.status, 400);
+    assert.deepEqual(blankReply.body, { error: 'Enter a reply before approval.' });
+
     const scriptLike = await post('/api/enquiries', { message: '<img src=x onerror=alert(1)>' });
     assert.equal(scriptLike.status, 201);
     assert.equal(scriptLike.headers.get('content-type'), 'application/json; charset=utf-8');
@@ -388,7 +392,10 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
     assert.equal(early.status, 409);
     const ack = await post(`/api/enquiries/${emergencyId}/acknowledge`, { acknowledgedBy: 'T2' });
     assert.equal(ack.status, 201);
-    const approvedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'Please call 000 now.' });
+    const downgradedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'This can wait until tomorrow.' });
+    assert.equal(downgradedEmergency.status, 400);
+    assert.deepEqual(downgradedEmergency.body, { error: 'Emergency approval must keep the fixed 000 instruction unchanged.' });
+    const approvedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'Please call 000 now. Do not wait for a reply from the clinic.' });
     assert.equal(approvedEmergency.status, 201);
 
     const slotA = await post('/api/enquiries', { message: 'Could I book an appointment next week?' });

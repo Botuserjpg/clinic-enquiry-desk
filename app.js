@@ -1212,6 +1212,10 @@
           setStaffRole(role);
           const value = textarea.value.trim();
           if (!value) { notify('Write or generate a reply before approval.'); return; }
+          if (result.emergency && value !== defaultDraft(result, null)) {
+            notify('Emergency approval must keep the fixed 000 instruction unchanged.');
+            return;
+          }
           if (extras && extras.medicalAdviceHits(value).length) { notify('Approval blocked: the draft contains medical-advice wording.'); return; }
           if (channelSelect.value === 'sms' && value.length > 320) { notify('Approval blocked: the SMS draft is over 320 characters.'); return; }
           if (!canApprove(result.category, role)) {

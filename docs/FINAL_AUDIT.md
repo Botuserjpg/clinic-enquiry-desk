@@ -5,7 +5,7 @@ Independent final audit of the repository state on 30 October 2026. The clean-co
 | Check | Result | Evidence |
 |---|---|---|
 | JavaScript syntax | PASS | `node --check` passed for all 21 `.js`/`.mjs` files. |
-| JavaScript tests | PASS | Latest `npm test`: 24 passed, 0 failed. Includes permission, acknowledgement, XSS-like input, cross-origin rejection, protected runtime paths, booking, duplicate, search, scroll and service-worker cache isolation cases. |
+| JavaScript tests | PASS | Latest `npm test`: 24 passed, 0 failed. Includes permission, acknowledgement, API-enforced fixed emergency wording, XSS-like input, cross-origin rejection, protected runtime paths, booking, duplicate, search, scroll and service-worker cache isolation cases. |
 | Python tests | PASS | Latest `python -m unittest discover -s tests -v`: 23 passed; `python -m pytest -q`: 23 passed and 12 subtests. |
 | Evaluation | PASS | 1,500 synthetic rows; exact category+priority 91.87% (bootstrap 95% CI 90.4–93.2%); category accuracy 95.60%; priority accuracy 92.93%. |
 | Emergency safety gate | PASS | 232/232 labelled emergency rows detected; recall 100%; 50 accepted false positives. |

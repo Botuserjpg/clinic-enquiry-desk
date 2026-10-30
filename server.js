@@ -43,6 +43,7 @@ const APPROVAL_ROLES = {
 };
 const STAFF_ROLES = ['Receptionist', 'Practice Nurse', 'GP', 'Practice Manager'];
 const STATUSES = ['open', 'done', 'snoozed'];
+const EMERGENCY_REPLY = 'Please call 000 now. Do not wait for a reply from the clinic.';
 
 function readEvents() {
   try {
@@ -262,6 +263,10 @@ function handleApi(request, response, pathname) {
         sendJson(response, 400, { error: 'Reply text must be 4,000 characters or fewer.' });
         return;
       }
+      if (!replyText.trim()) {
+        sendJson(response, 400, { error: 'Enter a reply before approval.' });
+        return;
+      }
       if (!['warm', 'formal', 'brief'].includes(tone) || !['email', 'sms'].includes(channel)) {
         sendJson(response, 400, { error: 'Unknown tone or channel.' });
         return;
@@ -284,6 +289,10 @@ function handleApi(request, response, pathname) {
       }
       if (enquiry.emergency && !events.some(event => event.type === 'emergency_acknowledged' && event.id === approval[1])) {
         sendJson(response, 409, { error: 'Acknowledge the 000 instruction before approving the emergency reply.' });
+        return;
+      }
+      if (enquiry.emergency && replyText.trim() !== EMERGENCY_REPLY) {
+        sendJson(response, 400, { error: 'Emergency approval must keep the fixed 000 instruction unchanged.' });
         return;
       }
       if (events.some(event => event.type === 'reply_approved' && event.id === approval[1])) {
