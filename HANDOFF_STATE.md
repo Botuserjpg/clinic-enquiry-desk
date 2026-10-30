@@ -44,8 +44,8 @@ The three lists above record the state found during the initial audit. The follo
 - Static demo mode now works from `file://`, a static file server, and GitHub Pages. `index.html` uses relative assets; `.nojekyll` exists; the mode badge reports STATIC DEMO; history uses localStorage with an in-memory fallback.
 - Node server mode still works. It injects a server marker, masks stored identifiers, returns routing/SLA fields, and preserves the hash-chained history.
 - `tools/evaluate.py` and `docs/evaluation_report.md` now report emergency recall. The fixture result is 4/4 (100%).
-- Routing, service-level targets, masking, verify-integrity, and simulate-clinic-day are implemented.
-- Tests were expanded. `npm test` passed 5/5 and `python -m unittest discover -s tests -v` passed 12/12.
+- Routing, service-level targets, masking, verify-integrity, and simulate-clinic-day are implemented. The classifier also returns explicit evidence (matched category term, prompt-review word, red-flag phrases, and rule order) for the UI.
+- Tests were expanded. `npm test` passed 6/6 and `python -m unittest discover -s tests -v` passed 12/12.
 - Headless Chrome checks passed in static HTTP, static `file://`, and server modes. The static runs made no `/api/` requests and reported no page exceptions.
 - `README.md`, architecture, assumptions, safety notes, build log, and `.gitignore` were updated to match the implementation.
 

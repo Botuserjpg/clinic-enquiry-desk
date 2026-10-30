@@ -15,21 +15,33 @@ def classify(message, rules=None):
     rules = rules or load_rules()
     normalized = str(message or "").lower()
     red_flags = [phrase for phrase in rules["redFlags"] if phrase in normalized]
-    match = next(
-        (category for category in rules["categories"]
-         if any(term in normalized for term in category["terms"])),
+    category_match = next(
+        ((category, term) for category in rules["categories"]
+         for term in category["terms"] if term in normalized),
         None,
     )
+    match = category_match[0] if category_match else None
+    matched_prompt_word = next((word for word in rules["promptReviewWords"] if word in normalized), None)
 
     # Emergencies override both category selection and routine urgency words.
     category = "Emergency" if red_flags else (match["name"] if match else "General enquiry")
     if red_flags:
         priority = rules["priorities"]["emergency"]
-    elif any(word in normalized for word in rules["promptReviewWords"]):
+    elif matched_prompt_word:
         priority = rules["priorities"]["promptReview"]
     else:
         priority = rules["priorities"]["routine"]
-    return {"category": category, "priority": priority, "redFlags": red_flags}
+    return {
+        "category": category,
+        "priority": priority,
+        "redFlags": red_flags,
+        "evidence": {
+            "matchedCategoryTerm": category_match[1] if category_match else None,
+            "matchedPromptWord": matched_prompt_word,
+            "redFlagPhrases": red_flags,
+            "ruleOrder": "red-flag override" if red_flags else ("category match" if category_match else "default category"),
+        },
+    }
 
 
 def route(result, rules=None):

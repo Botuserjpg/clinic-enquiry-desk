@@ -14,6 +14,16 @@ test('emergency wording overrides appointment and urgency words', () => {
   assert.deepEqual(result.redFlags, ['cannot breathe']);
 });
 
+test('classifier exposes the matched evidence', () => {
+  const routine = classify('Could I book an appointment today?', rules);
+  assert.equal(routine.evidence.matchedCategoryTerm, 'appointment');
+  assert.equal(routine.evidence.matchedPromptWord, 'today');
+  assert.equal(routine.evidence.ruleOrder, 'category match');
+  const emergency = classify('I cannot breathe.', rules);
+  assert.equal(emergency.evidence.ruleOrder, 'red-flag override');
+  assert.deepEqual(emergency.evidence.redFlagPhrases, ['cannot breathe']);
+});
+
 test('routing and SLA come from the shared rules', () => {
   assert.deepEqual(routeEnquiry(classify('Could I book an appointment?', rules), rules), {
     assignee: 'Receptionist',

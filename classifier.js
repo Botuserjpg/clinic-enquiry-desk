@@ -4,13 +4,17 @@
     const normalized = String(message || '').toLowerCase();
     const redFlags = rules.redFlags.filter(phrase => normalized.includes(phrase));
     const emergency = redFlags.length > 0;
-    const matchedCategory = rules.categories.find(category => category.terms.some(term => normalized.includes(term)));
+    const categoryMatch = rules.categories
+      .map(category => ({ category, term: category.terms.find(term => normalized.includes(term)) }))
+      .find(match => match.term);
+    const matchedCategory = categoryMatch && categoryMatch.category;
+    const matchedPromptWord = rules.promptReviewWords.find(word => normalized.includes(word)) || null;
 
     // An emergency flag overrides category and routine urgency decisions.
     const category = emergency ? 'Emergency' : matchedCategory?.name || 'General enquiry';
     const priority = emergency
       ? rules.priorities.emergency
-      : rules.promptReviewWords.some(word => normalized.includes(word))
+      : matchedPromptWord
         ? rules.priorities.promptReview
         : rules.priorities.routine;
     return {
@@ -19,6 +23,12 @@
       redFlags,
       emergency,
       reply: emergency ? rules.replies.emergency : rules.replies.routine,
+      evidence: {
+        matchedCategoryTerm: categoryMatch ? categoryMatch.term : null,
+        matchedPromptWord,
+        redFlagPhrases: redFlags,
+        ruleOrder: emergency ? 'red-flag override' : categoryMatch ? 'category match' : 'default category',
+      },
     };
   }
 

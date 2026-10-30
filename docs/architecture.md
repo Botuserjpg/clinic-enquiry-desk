@@ -13,7 +13,7 @@
 
 ## Rule order
 
-Red-flag phrase matching runs first. A match sets both category and priority to Emergency, regardless of any appointment or urgency words also present. Otherwise the first configured category match applies, followed by prompt-review words and then routine priority. The phrase rules are illustrative text matches, not a clinical assessment.
+Red-flag phrase matching runs first. A match sets both category and priority to Emergency, regardless of any appointment or urgency words also present. Otherwise the first configured category match applies, followed by prompt-review words and then routine priority. The phrase rules are illustrative text matches, not a clinical assessment. The classifier also returns evidence for the UI: the matched category term, the matched prompt-review word, the red-flag phrases, and which rule order applied.
 
 Routing then maps the final category to a synthetic role. Service-level targets map the final priority to a review window, with emergencies set to immediate relay. Both maps live in `rules.json` so JavaScript and Python use the same values.
 

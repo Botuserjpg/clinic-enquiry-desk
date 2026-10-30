@@ -31,8 +31,8 @@ class SharedRulesParityTests(unittest.TestCase):
         for enquiry, js_result in zip(self.enquiries, javascript):
             py_result = classify(enquiry["message"], self.rules)
             self.assertEqual(
-                {key: js_result[key] for key in ("category", "priority", "redFlags")},
-                py_result,
+                {key: js_result[key] for key in ("category", "priority", "redFlags", "evidence")},
+                {key: py_result[key] for key in ("category", "priority", "redFlags", "evidence")},
                 msg=enquiry["id"],
             )
 

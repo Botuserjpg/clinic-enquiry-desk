@@ -192,6 +192,21 @@
     meta.append(assigned, sla);
     resultContent.append(meta);
 
+    const why = document.createElement('p');
+    why.className = 'why';
+    const evidence = result.evidence || {};
+    if (result.emergency) {
+      const phrases = (result.redFlags || evidence.redFlagPhrases || []).join('”, “');
+      why.textContent = `Why: red-flag phrase “${phrases}” overrides category and urgency.`;
+    } else {
+      const parts = [
+        evidence.matchedCategoryTerm ? `category term “${evidence.matchedCategoryTerm}”` : 'no category term (default General enquiry)',
+        evidence.matchedPromptWord ? `prompt-review word “${evidence.matchedPromptWord}”` : 'no prompt-review word (routine priority)',
+      ];
+      why.textContent = `Why: ${parts.join('; ')}.`;
+    }
+    resultContent.append(why);
+
     if (result.message) {
       const preview = document.createElement('p');
       preview.className = 'message-preview';
