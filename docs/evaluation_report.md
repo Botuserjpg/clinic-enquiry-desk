@@ -12,7 +12,7 @@ Generated from the synthetic evaluation set. All messages are fictional. Labels 
 - Emergency recall: **100.0%** (232/232)
 - Emergency false positives: **50**
 - Human-review rate: **40.8%**
-- Classification latency: **30.0 ms** for the whole set (0.0200 ms per message)
+- Classification latency: **53.2 ms** for the whole set (0.0355 ms per message)
 
 ## Per-category results
 

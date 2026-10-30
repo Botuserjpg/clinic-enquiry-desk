@@ -170,6 +170,19 @@ async function main() {
     localOnly: performance.getEntriesByType('resource').every(entry => entry.name.startsWith('file:') || entry.name.startsWith(location.origin) || /kaspersky-labs\\.com\\//i.test(entry.name)),
   }))()`);
 
+  const sameViewScroll = await evaluate(`(() => {
+    const root = document.documentElement;
+    const oldBehaviour = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 450);
+    const before = window.scrollY;
+    window.ClinicViews.showView(window.ClinicViews.currentView());
+    const after = window.scrollY;
+    window.scrollTo(0, 0);
+    root.style.scrollBehavior = oldBehaviour;
+    return { before, after, preserved: Math.abs(before - after) <= 1 };
+  })()`);
+
   await screenshot('01-inbox.png');
 
   const triage = await evaluate(`(async () => {
@@ -349,6 +362,7 @@ async function main() {
     title: initial.title,
     mode: initial.mode,
     initial,
+    sameViewScroll,
     triage,
     emergency,
     dashboard,
@@ -386,6 +400,7 @@ async function main() {
   if (!simulator.patternBars || !simulator.liveCards) throw new Error('Simulator did not render.');
   if (!command.open || !command.results) throw new Error('Command palette did not render results.');
   if (!command.keyboardFocus || !await evaluate('document.querySelector("#command-palette").hidden')) throw new Error('Keyboard palette open/focus/close check failed.');
+  if (!sameViewScroll.preserved) throw new Error(`Selecting the active view moved the page: ${JSON.stringify(sameViewScroll)}`);
 }
 
 try {

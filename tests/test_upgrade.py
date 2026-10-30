@@ -46,6 +46,12 @@ class EvaluationTests(unittest.TestCase):
         self.assertNotIn("category", bundle["enquiries"][0])
         self.assertNotIn("message", bundle["labels"][0])
 
+    def test_browser_evaluation_metrics_match_the_json_report(self):
+        source = (ROOT / "docs/evaluation_metrics.js").read_text(encoding="utf-8")
+        match = re.fullmatch(r"window\.CLINIC_EVAL_METRICS = (.*);\s*", source, re.DOTALL)
+        self.assertIsNotNone(match)
+        self.assertEqual(json.loads(match.group(1)), self.metrics)
+
     def test_emergency_recall_is_100_percent_on_the_evaluation_set(self):
         expected = [row for row in self.labels if row["category"] == "Emergency"]
         recalled = []

@@ -103,3 +103,8 @@ Work window: 2026-10-30, approximately 15:40–16:20 (local environment time). F
 
 ### Final round — audit artefact cleanup
 - Replaced an old browser report's machine-specific file URL with a fresh-copy placeholder after the final local-path scan found it. Final scan is clean.
+
+### Follow-up from owner video review
+- Reproduced the visible jump: selecting the already-active view reset the document to the top; initial view setup could also reset scroll after the page began loading. Same-view navigation now preserves the current position, and initial setup never forces a scroll.
+- The recording's Safety Net latency (32.5 ms) disagreed with the refreshed JSON/report (30.04 ms). Evaluation now regenerates the browser metrics bundle with its JSON and report; a parity test prevents stale values.
+- Added a browser regression check for same-view scroll preservation.

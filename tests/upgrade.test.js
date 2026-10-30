@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 const { classify, routeEnquiry, maskSensitive } = require('../classifier.js');
 const knowledge = require('../knowledge.js');
 const extras = require('../extras.js');
@@ -168,6 +169,26 @@ test('static shell stays relative, local-only and free of external assets', () =
   assert.equal(/src="\//.test(html), false);
   assert.equal(/<(?:script|link|img)[^>]+(?:src|href)="https?:/.test(html), false);
   assert.equal(/\/api\//.test(html), false);
+});
+
+test('same-view navigation does not reset scroll; switching views still starts at the top', () => {
+  const windowMock = { location: { hash: '#inbox' }, scrolls: [], scrollTo(...args) { this.scrolls.push(args); } };
+  const documentMock = {
+    readyState: 'loading',
+    querySelectorAll: () => [],
+    querySelector: () => null,
+    addEventListener() {},
+    dispatchEvent() {},
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'views.js'), 'utf8'), {
+    window: windowMock,
+    document: documentMock,
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
+  });
+  windowMock.ClinicViews.showView('inbox');
+  assert.equal(windowMock.scrolls.length, 0, 'reselecting Inbox should preserve the typing position');
+  windowMock.ClinicViews.showView('queue');
+  assert.equal(windowMock.scrolls.length, 1, 'switching to a different view should reset its position');
 });
 
 test('masking removes identifiers and never removes the 000 instruction', () => {

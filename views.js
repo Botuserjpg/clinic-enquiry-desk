@@ -35,6 +35,7 @@
 
   function showView(name, options = {}) {
     const view = VIEWS[name] ? name : 'inbox';
+    const alreadyActive = currentView === view;
     currentView = view;
     $$('.view').forEach(section => {
       section.hidden = section.dataset.view !== view;
@@ -60,7 +61,7 @@
         target.focus({ preventScroll: true });
         target.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth', block: 'center' });
       }
-    } else {
+    } else if (!alreadyActive && !options.preserveScroll) {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }
     document.dispatchEvent(new CustomEvent('clinic:view', { detail: { view } }));
@@ -79,8 +80,10 @@
       });
     });
     const initial = (window.location.hash || '').replace('#', '');
-    if (VIEWS[initial]) showView(initial);
-    else showView('inbox');
+    // Initialisation can run just after the user starts interacting. Preserve
+    // their position so deferred setup cannot yank the page back to the hero.
+    if (VIEWS[initial]) showView(initial, { preserveScroll: true });
+    else showView('inbox', { preserveScroll: true });
     const toggle = $('#sidebar-toggle');
     const sidebar = $('#sidebar');
     if (toggle && sidebar) {

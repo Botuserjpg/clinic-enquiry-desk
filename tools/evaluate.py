@@ -285,11 +285,18 @@ def main():
     Path(args.json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.json).write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
     write_report(metrics, args.report)
+    browser_metrics = Path(args.json).with_suffix(".js")
+    browser_metrics.write_text(
+        "window.CLINIC_EVAL_METRICS = "
+        + json.dumps(metrics, ensure_ascii=False, separators=(",", ":"))
+        + ";\n",
+        encoding="utf-8",
+    )
     print(f"Rows: {metrics['dataset']['rows']}")
     print(f"Exact accuracy: {metrics['accuracy']['exact_category_and_priority']:.1%}")
     print(f"Emergency recall: {metrics['emergency']['recall']:.1%}")
     print(f"False positives: {metrics['emergency']['false_positives']}")
-    print(f"Wrote {args.json} and {args.report}")
+    print(f"Wrote {args.json}, {browser_metrics} and {args.report}")
 
 
 if __name__ == "__main__":

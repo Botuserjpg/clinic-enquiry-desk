@@ -150,9 +150,9 @@ python -m pytest -q
 Current results (recorded from real runs in the final working session):
 
 - `node --check` on every project JavaScript file: **all passed**.
-- `npm test`: **19/19 passed**.
-- `python -m unittest discover -s tests -v`: **22/22 passed**.
-- `python -m pytest -q`: **22 passed, 12 subtests passed**.
+- `npm test`: **20/20 passed**.
+- `python -m unittest discover -s tests -v`: **23/23 passed**.
+- `python -m pytest -q`: **23 passed, 12 subtests passed**.
 - Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
 - Final headless Edge checks on a fresh temporary copy passed static root, GitHub-style subpath, `file://`, and server mode. Static modes recorded **zero `/api/` calls** and all modes had **zero unexpected external requests, console errors or page exceptions**. All seven Trust Center checks passed; the Rules Lab displayed its full 1,500-row result.
 - These are rule-consistency results on fictional examples, **not** clinical validation or evidence of real-world safety.
