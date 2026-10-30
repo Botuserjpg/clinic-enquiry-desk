@@ -126,11 +126,14 @@ test('command palette enquiry search finds recent local records and returns safe
   assert.deepEqual(extras.searchEnquiries('e', events), []);
   assert.equal(extras.searchEnquiries('routine', events, 1).length, 1);
   const mission = fs.readFileSync(path.join(root, 'mission.js'), 'utf8');
+  const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(mission, /label\.textContent = command\.label/);
   assert.match(mission, /setAttribute\('role', 'combobox'\)/);
   assert.match(mission, /Search commands or local enquiries/);
   assert.match(mission, /setAttribute\('aria-activedescendant'/);
   assert.match(mission, /commandInput\.maxLength = 120/);
+  assert.match(mission, /commandInput\.setAttribute\('aria-expanded', 'false'\)/);
+  assert.match(index, /id="command-input"[^>]*aria-expanded="false"/);
   assert.doesNotMatch(mission, /item\.innerHTML = `\$\{command\.label\}/);
 });
 
@@ -143,6 +146,13 @@ test('emergency and interpreter contact numbers come from verified clinic config
   assert.doesNotMatch(app, /Lifeline 13 11 14|Healthdirect 1800 022 222|'131 450'/);
   assert.ok(config.helplines.every(line => /verify before real use/i.test(line.comment)));
   assert.match(config.interpreterService.comment, /verify before real use/i);
+});
+
+test('decision pipeline renders dynamic rule text without an HTML sink', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(app, /renderStageRule\(rule, stage\.rule\)/);
+  assert.match(app, /code\.textContent = decodeStageText\(match\[1\]\)/);
+  assert.doesNotMatch(app, /\.innerHTML\s*=/, 'application UI avoids HTML injection sinks');
 });
 
 test('FHIR-shaped export is labelled illustrative and CSV escapes text', () => {
@@ -326,6 +336,14 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
   assert.equal(portCollision.status, 1);
   assert.match(portCollision.stderr, /already in use/i);
   assert.doesNotMatch(portCollision.stderr, /Unhandled 'error' event/);
+  const invalidPort = spawnSync(process.execPath, [path.join(root, 'server.js')], {
+    env: { ...process.env, PORT: 'not-a-port' },
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+  assert.equal(invalidPort.status, 1);
+  assert.match(invalidPort.stderr, /Invalid PORT\. Choose a whole number from 1 to 65535\./);
+  assert.doesNotMatch(invalidPort.stderr, /RangeError|Unhandled 'error' event/);
   const post = async (route, body) => {
     const response = await fetch(`${base}${route}`, {
       method: 'POST',

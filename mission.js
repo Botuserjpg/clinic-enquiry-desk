@@ -836,6 +836,8 @@
     commandInput.setAttribute('aria-label', 'Search commands or enquiries in local history');
     commandInput.setAttribute('role', 'combobox');
     commandInput.setAttribute('aria-autocomplete', 'list');
+    commandInput.setAttribute('aria-expanded', 'false');
+    commandInput.removeAttribute('aria-activedescendant');
     commandInput.maxLength = 120;
     commandInput.addEventListener('input', () => { selectedCommand = 0; renderCommands(commandInput.value); });
     commandInput.addEventListener('keydown', event => {

@@ -446,7 +446,9 @@
     if (!events.length) {
       const empty = document.createElement('span');
       empty.className = 'chain-block unknown';
-      empty.innerHTML = '<b>GENESIS</b>no events';
+      const label = document.createElement('b');
+      label.textContent = 'GENESIS';
+      empty.append(label, document.createTextNode('no events'));
       chain.append(empty);
       return;
     }
@@ -574,6 +576,26 @@
     return String(text).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   }
 
+  function decodeStageText(text) {
+    const entities = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+    return String(text).replace(/&(?:amp|lt|gt|quot|#39);/g, entity => entities[entity]);
+  }
+
+  function renderStageRule(target, markup) {
+    const source = String(markup);
+    const codeTag = /<code>([\s\S]*?)<\/code>/gi;
+    let cursor = 0;
+    for (const match of source.matchAll(codeTag)) {
+      const index = match.index;
+      if (index > cursor) target.append(document.createTextNode(decodeStageText(source.slice(cursor, index))));
+      const code = document.createElement('code');
+      code.textContent = decodeStageText(match[1]);
+      target.append(code);
+      cursor = index + match[0].length;
+    }
+    if (cursor < source.length) target.append(document.createTextNode(decodeStageText(source.slice(cursor))));
+  }
+
   function buildStages(result, context = {}) {
     const evidence = result.evidence || {};
     const phrases = result.redFlags || evidence.redFlagPhrases || [];
@@ -691,7 +713,13 @@
 
     const kicker = document.createElement('div');
     kicker.className = 'emergency-kicker';
-    kicker.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg> EMERGENCY WORDING DETECTED';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.classList.add('icon');
+    icon.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', '#i-alert');
+    icon.append(use);
+    kicker.append(icon, document.createTextNode(' EMERGENCY WORDING DETECTED'));
     const call = document.createElement('div');
     call.className = 'call-000';
     call.textContent = 'CALL 000 NOW';
@@ -1015,7 +1043,7 @@
       title.append(name, state);
       const rule = document.createElement('p');
       rule.className = 'stage-rule';
-      rule.innerHTML = stage.rule;
+      renderStageRule(rule, stage.rule);
       body.append(title, rule);
       item.append(number, body);
       list.append(item);

@@ -381,15 +381,20 @@ const server = http.createServer((request, response) => {
 });
 
 if (require.main === module) {
-  server.on('error', error => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`Port ${port} is already in use. Stop the other server or choose a different PORT.`);
-    } else {
-      console.error(`The local demo could not start: ${error.message}`);
-    }
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error('Invalid PORT. Choose a whole number from 1 to 65535.');
     process.exitCode = 1;
-  });
-  server.listen(port, '127.0.0.1', () => console.log(`Clinic Enquiry Desk running at http://localhost:${port}`));
+  } else {
+    server.on('error', error => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${port} is already in use. Stop the other server or choose a different PORT.`);
+      } else {
+        console.error(`The local demo could not start: ${error.message}`);
+      }
+      process.exitCode = 1;
+    });
+    server.listen(port, '127.0.0.1', () => console.log(`Clinic Enquiry Desk running at http://localhost:${port}`));
+  }
 }
 
 module.exports = { server, APPROVAL_ROLES, STAFF_ROLES, STATUSES, readEvents, appendEvent, resolveStaticFile };
