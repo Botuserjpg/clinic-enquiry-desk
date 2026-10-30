@@ -1,14 +1,18 @@
 (() => {
   'use strict';
 
-  const rules = window.CLINIC_RULES;
   const config = window.CLINIC_CONFIG || {};
   const classifier = window.ClinicClassifier;
+  const knowledge = window.ClinicKnowledge;
+  const extras = window.ClinicExtras;
+  const faq = window.CLINIC_FAQ || [];
   const params = new URLSearchParams(window.location.search);
   const forcedMode = params.get('mode');
   // Static is the default for file:// and GitHub Pages. The Node server injects a marker.
   const isStatic = forcedMode === 'static' || (forcedMode !== 'server' && !window.CLINIC_SERVER_MODE);
   const STORAGE_KEY = 'clinicDeskEventsV1';
+  const RULES_KEY = 'clinicRulesOverrideV1';
+  const ROLE_KEY = 'clinicStaffRole';
   const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let memoryEvents = [];
   let toastTimer;
@@ -19,6 +23,25 @@
   let currentApproved = false;
   let tamperIndex = null;
   let latestMetrics = null;
+  let staffRole = 'Receptionist';
+  let rules = window.CLINIC_RULES;
+
+  // A saved Rules Lab draft is local to this browser. Keep it behind a try/catch.
+  try {
+    const storedRules = window.localStorage.getItem(RULES_KEY);
+    if (storedRules) {
+      const parsed = JSON.parse(storedRules);
+      if (parsed && Array.isArray(parsed.redFlags) && Array.isArray(parsed.categories)) rules = parsed;
+    }
+  } catch {
+    // A blocked or corrupt override must not stop the demo.
+  }
+  try {
+    const storedRole = window.localStorage.getItem(ROLE_KEY);
+    if (storedRole) staffRole = storedRole;
+  } catch {
+    // Keep the default role.
+  }
 
   const $ = selector => document.querySelector(selector);
   const form = $('#intake-form');
@@ -34,12 +57,35 @@
     if (element) element.textContent = value;
   }
 
-  function notify(message) {
+  function notify(message, options = {}) {
     if (!toast) return;
-    toast.textContent = message;
+    toast.replaceChildren();
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.append(text);
+    if (typeof options.undo === 'function') {
+      const undo = document.createElement('button');
+      undo.type = 'button';
+      undo.className = 'toast-undo';
+      undo.textContent = options.undoLabel || 'Undo';
+      undo.addEventListener('click', () => {
+        toast.classList.remove('show');
+        Promise.resolve(options.undo()).catch(error => notify(error.message));
+      });
+      toast.append(undo);
+    }
     toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), options.duration || 4200);
+  }
+
+  function notifyBrowser(title, body) {
+    try {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      new Notification(title, { body, tag: 'clinic-emergency' });
+    } catch {
+      // Optional feature; never block the workflow.
+    }
   }
 
   function newId() {
@@ -214,6 +260,13 @@
       return new Date(approval.timestamp).getTime() - new Date(enquiry.timestamp).getTime();
     }).filter(value => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
     const median = times.length ? times[Math.floor((times.length - 1) / 2)] : null;
+    const ackTimes = events.filter(event => event.type === 'emergency_acknowledged').map(event => {
+      const enquiry = received.find(item => item.id === event.id);
+      if (!enquiry || !enquiry.timestamp) return null;
+      return new Date(event.timestamp).getTime() - new Date(enquiry.timestamp).getTime();
+    }).filter(value => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
+    const medianAck = ackTimes.length ? ackTimes[Math.floor((ackTimes.length - 1) / 2)] : null;
+    const reviewRows = received.filter(event => event.priority === 'Prompt review' || event.emergency);
     return {
       total: received.length,
       review: pending.length,
@@ -222,6 +275,8 @@
       slaBreaches: overdue.length,
       approvals: approvals.length,
       medianTtfp: median,
+      medianAck,
+      reviewRate: received.length ? reviewRows.length / received.length : null,
       received,
       pending,
       approvalsList: approvals,
@@ -245,6 +300,8 @@
     ];
     for (const [selector, value] of values) setText(selector, Number(value).toLocaleString('en-AU'));
     setText('#metric-ttfp', metrics.medianTtfp === null ? '—' : formatDuration(metrics.medianTtfp));
+    setText('#metric-review-rate', metrics.reviewRate === null ? '—' : `${(metrics.reviewRate * 100).toFixed(1)}%`);
+    setText('#metric-ack', metrics.medianAck === null ? '—' : formatDuration(metrics.medianAck));
 
     const strip = $('#emergency-strip');
     if (strip) {
@@ -257,6 +314,129 @@
   let cachedEvents = [];
   function stateEvents() {
     return cachedEvents.slice();
+  }
+
+  // Server and browser use the same fictional permission matrix. The server is
+  // still the enforcement point in server mode.
+  const APPROVAL_ROLES = {
+    Emergency: ['Practice Nurse', 'GP', 'Practice Manager'],
+    'Prescription refill': ['GP'],
+    'Test results': ['Practice Nurse', 'GP'],
+    'Complaint / feedback': ['Practice Manager'],
+    Billing: ['Receptionist', 'Practice Manager'],
+    Appointments: ['Receptionist', 'Practice Manager'],
+    'General enquiry': ['Receptionist', 'Practice Manager'],
+  };
+
+  function canApprove(category, role) {
+    return (APPROVAL_ROLES[category] || ['Receptionist']).includes(role);
+  }
+
+  function setStaffRole(role) {
+    staffRole = role || 'Receptionist';
+    try { window.localStorage.setItem(ROLE_KEY, staffRole); } catch { /* optional */ }
+  }
+
+  function latestStatusOf(events, id) {
+    const statuses = events.filter(event => event.type === 'status_changed' && event.id === id);
+    return statuses.length ? statuses[statuses.length - 1].status : 'open';
+  }
+
+  function bookedSlotIds(events) {
+    return events.filter(event => event.type === 'appointment_booked').map(event => event.slotId);
+  }
+
+  function downloadFile(filename, content, type) {
+    try {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notify(`${filename} exported locally.`);
+    } catch (error) {
+      notify(`Export failed: ${error.message}`);
+    }
+  }
+
+  async function exportCsv() {
+    try {
+      const events = await getEvents();
+      downloadFile('clinic-enquiries.csv', extras.toCsv(events), 'text/csv;charset=utf-8');
+    } catch (error) {
+      notify(`CSV export unavailable: ${error.message}`);
+    }
+  }
+
+  async function exportFhir() {
+    try {
+      const events = await getEvents();
+      const received = events.filter(event => event.type === 'enquiry_received');
+      const bundle = {
+        resourceType: 'Bundle',
+        type: 'collection',
+        timestamp: new Date().toISOString(),
+        meta: { tag: [{ system: 'https://example.invalid/demo', code: 'illustrative-not-validated', display: 'Illustrative FHIR-shaped export; not validated' }] },
+        entry: received.flatMap(event => extras.toFhir(event, config).entry),
+      };
+      downloadFile('clinic-enquiries-fhir-shaped.json', JSON.stringify(bundle, null, 2), 'application/json');
+    } catch (error) {
+      notify(`FHIR-shaped export unavailable: ${error.message}`);
+    }
+  }
+
+  async function setStatus(id, status) {
+    if (!['open', 'done', 'snoozed'].includes(status)) throw new Error('Unknown status.');
+    const events = await getEvents();
+    const previous = latestStatusOf(events, id);
+    if (previous === status) return;
+    if (isStatic) {
+      await appendStaticEvent({ type: 'status_changed', id, status, changedBy: staffRole });
+    } else {
+      await request(`/api/enquiries/${encodeURIComponent(id)}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, staffRole }),
+      });
+    }
+    await loadHistory();
+    notify(`Enquiry marked ${status}. The change is in the audit chain.`, {
+      undo: () => setStatus(id, previous),
+      undoLabel: 'Undo',
+    });
+  }
+
+  function setRules(nextRules) {
+    if (!nextRules || !Array.isArray(nextRules.redFlags) || !Array.isArray(nextRules.categories)) throw new Error('Rules are not valid.');
+    rules = nextRules;
+    try { window.localStorage.setItem(RULES_KEY, JSON.stringify(nextRules)); } catch { /* optional */ }
+    document.dispatchEvent(new CustomEvent('clinic:rules', { detail: { rules } }));
+  }
+
+  function clearLocalData() {
+    memoryEvents = [];
+    cachedEvents = [];
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(RULES_KEY);
+    } catch { /* optional */ }
+    renderHistory([]);
+    renderIntegrityChain([]);
+    updateMetrics(computeMetrics([]));
+    notify('Local synthetic history cleared from this browser.');
+  }
+
+  function faqAnswer(message) {
+    if (!knowledge || !Array.isArray(faq) || !faq.length) return null;
+    try {
+      return knowledge.answer(message, faq, Number(config.faqMatchThreshold) || 1.2);
+    } catch {
+      return null;
+    }
   }
 
   function renderIntegrityChain(events) {
@@ -394,63 +574,84 @@
     return String(text).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   }
 
-  function buildStages(result) {
+  function buildStages(result, context = {}) {
     const evidence = result.evidence || {};
     const phrases = result.redFlags || evidence.redFlagPhrases || [];
     const stages = [];
-    if (result.emergency) {
-      stages.push({
-        title: 'Emergency phrase scan',
-        state: 'OVERRIDE',
-        stateClass: 'override',
-        rule: `Matched red-flag ${phrases.length === 1 ? 'phrase' : 'phrases'} ${phrases.map(phrase => `<code>${escapeHtml(phrase)}</code>`).join(', ')}. This rule runs first and overrides every category and urgency rule.`,
-      });
-    } else {
-      stages.push({
-        title: 'Emergency phrase scan',
-        state: 'CLEAR',
-        stateClass: '',
-        rule: 'No red-flag phrase matched. Continue to category matching. A clear scan is not proof that an enquiry is safe — staff judgement still applies.',
-      });
-    }
-    if (result.emergency) {
-      stages.push({
-        title: 'Category lock',
-        state: 'EMERGENCY',
-        stateClass: 'override',
-        rule: 'Category is locked to Emergency. Underlying term match is ignored for routing because the emergency route takes precedence.',
-      });
-    } else {
-      stages.push({
-        title: 'Category match',
-        state: evidence.matchedCategoryTerm ? 'MATCH' : 'DEFAULT',
-        stateClass: evidence.matchedCategoryTerm ? 'hit' : 'assumed',
-        rule: evidence.matchedCategoryTerm
-          ? `First configured term <code>${escapeHtml(evidence.matchedCategoryTerm)}</code> matched. Category: <code>${escapeHtml(result.category)}</code>.`
-          : 'No configured category term matched. Default category: <code>General enquiry</code>.',
-      });
-    }
+    const faqMatch = context.faqMatch || null;
+    const slots = context.slots || [];
     stages.push({
-      title: 'Priority decision',
-      state: result.emergency ? 'OVERRIDE' : evidence.matchedPromptWord ? 'PROMPT REVIEW' : 'ROUTINE',
-      stateClass: result.emergency ? 'override' : evidence.matchedPromptWord ? 'assumed' : '',
-      rule: result.emergency
-        ? 'Emergency wording sets the highest priority and a zero-minute relay target.'
-        : evidence.matchedPromptWord
-          ? `Prompt-review word <code>${escapeHtml(evidence.matchedPromptWord)}</code> matched. Priority: <code>${escapeHtml(result.priority)}</code>.`
-          : 'No prompt-review word matched. Priority: <code>Routine</code>.',
+      title: 'Intake',
+      state: 'RECEIVED',
+      stateClass: 'hit',
+      rule: `Message received as a local event (<code>${escapeHtml(String(result.id || '').slice(0, 8) || 'new')}</code>). Length ${String(result.message || '').length} characters. Nothing leaves this browser in static mode.`,
     });
     stages.push({
-      title: 'Route and service target',
+      title: 'Privacy mask',
+      state: 'MASKED',
+      stateClass: 'hit',
+      rule: 'Structured identifiers (phone, email, Medicare-shaped number, date) are replaced before local storage. The masked preview is shown below. Free-text names are not reliably detectable; staff must still avoid real patient data.',
+    });
+    stages.push({
+      title: 'Understand',
+      state: evidence.matchedCategoryTerm ? 'MATCH' : 'DEFAULT',
+      stateClass: evidence.matchedCategoryTerm ? 'hit' : 'assumed',
+      rule: evidence.matchedCategoryTerm
+        ? `First configured term <code>${escapeHtml(evidence.matchedCategoryTerm)}</code> matched. Category: <code>${escapeHtml(result.category)}</code>. Tone: <code>${escapeHtml(evidence.toneLabel || 'calm')}</code>${evidence.language ? `; language cue: <code>${escapeHtml(evidence.language)}</code>` : ''}.`
+        : `No configured category term matched. Default category: <code>General enquiry</code>. Tone: <code>${escapeHtml(evidence.toneLabel || 'calm')}</code>${evidence.language ? `; language cue: <code>${escapeHtml(evidence.language)}</code>` : ''}.`,
+    });
+    if (result.emergency) {
+      stages.push({
+        title: 'Safety check',
+        state: 'OVERRIDE',
+        stateClass: 'override',
+        rule: `Matched red-flag ${phrases.length === 1 ? 'phrase' : 'phrases'} ${phrases.map(phrase => `<code>${escapeHtml(phrase)}</code>`).join(', ')}. This rule runs first and overrides category, tone, complaint, language and injection rules. ${evidence.injectionDetected ? 'Injection text was also detected and is shown to staff, but cannot downgrade this result.' : ''}`,
+      });
+    } else {
+      const extra = [];
+      if ((evidence.negatedRedFlags || []).length) extra.push(`Negated phrase still matched: <code>${escapeHtml(evidence.negatedRedFlags.join(', '))}</code>.`);
+      if (evidence.injectionDetected) extra.push(`Injection phrase detected: <code>${escapeHtml((evidence.injectionPhrases || []).join(', '))}</code>. It is evidence only, not an instruction.`);
+      stages.push({
+        title: 'Safety check',
+        state: 'CLEAR',
+        stateClass: '',
+        rule: `No red-flag phrase matched. A clear scan is not proof that an enquiry is safe — staff judgement still applies. ${extra.join(' ')}`,
+      });
+    }
+    stages.push({
+      title: 'Route',
       state: 'ROUTED',
       stateClass: 'hit',
-      rule: `Routing table sends <code>${escapeHtml(result.category)}</code> to <code>${escapeHtml(result.assignee || 'Receptionist')}</code>. Target: <code>${result.slaMinutes === 0 ? 'relay now' : formatDuration((result.slaMinutes || 0) * 60000)}</code>.`,
+      rule: `Routing table sends <code>${escapeHtml(result.category)}</code> to <code>${escapeHtml(result.assignee || 'Receptionist')}</code>. ${result.category === 'Complaint / feedback' ? 'Complaint routing always goes to the Practice Manager.' : ''}${evidence.interpreterSuggested ? ' Interpreter may be needed; use the configured TIS number, never auto-translate clinical content.' : ''}`,
+    });
+    stages.push({
+      title: 'SLA clock',
+      state: result.slaMinutes === 0 ? 'RELAY NOW' : 'TIMER',
+      stateClass: result.slaMinutes === 0 ? 'override' : 'assumed',
+      rule: result.slaMinutes === 0
+        ? 'Emergency wording sets a zero-minute relay target. The clock is not a substitute for calling 000.'
+        : `Target: <code>${formatDuration((result.slaMinutes || 0) * 60000)}</code>. ${result.timestamp ? slaText(result) : 'The timer starts when the event is stored.'}`,
+    });
+    const draftBits = [];
+    if (faqMatch && faqMatch.best) {
+      draftBits.push(faqMatch.lowMatch
+        ? `FAQ best match <code>${escapeHtml(faqMatch.best.entry.id)}</code> scored <code>${faqMatch.score}</code>, below the configured threshold. It is sent to human review rather than asserted.`
+        : `Draft cites FAQ <code>${escapeHtml(faqMatch.best.entry.id)}</code> (“${escapeHtml(faqMatch.best.entry.question)}”) at BM25 score <code>${faqMatch.score}</code>.`);
+    }
+    if (slots.length) draftBits.push(`${slots.length} synthetic appointment slot(s) suggested from the local calendar.`);
+    stages.push({
+      title: 'Draft reply',
+      state: result.emergency ? '000 TEMPLATE' : 'DRAFTED',
+      stateClass: result.emergency ? 'override' : 'hit',
+      rule: result.emergency
+        ? 'The 000 template is fixed. No tone selector, FAQ answer, appointment slot or staff edit can replace the emergency wording.'
+        : `A staff-editable draft is prepared. ${draftBits.join(' ') || 'No FAQ or appointment suggestion applies.'}`,
     });
     stages.push({
       title: 'Human approval gate',
       state: 'GATE',
       stateClass: 'assumed',
-      rule: 'A reply draft is prepared for a staff member. Approval records a human decision in the local history; this demo never sends a message.',
+      rule: `Allowed approvers for <code>${escapeHtml(result.category)}</code>: ${(APPROVAL_ROLES[result.category] || ['Receptionist']).map(role => `<code>${escapeHtml(role)}</code>`).join(', ')}. Approval records a human decision in the local history; this demo never sends a message.${result.emergency ? ' The reply stays locked until the emergency is acknowledged.' : ''}`,
     });
     return stages;
   }
@@ -603,18 +804,74 @@
     return box;
   }
 
+  function defaultDraft(result, faqMatch) {
+    if (result.emergency) return result.reply || 'Please call 000 now. Do not wait for a reply from the clinic.';
+    let text = result.reply || '';
+    if (faqMatch && faqMatch.best && !faqMatch.lowMatch) {
+      text += `\n\n${faqMatch.best.entry.answer}\n\nSource: ${faqMatch.best.entry.question} (FAQ ${faqMatch.best.entry.id}, BM25 score ${faqMatch.score}).`;
+    }
+    return text;
+  }
+
+  function infoBox(title, text, className = '') {
+    const box = document.createElement('div');
+    box.className = `info-box ${className}`.trim();
+    const strong = document.createElement('strong');
+    strong.textContent = title;
+    const copy = document.createElement('p');
+    copy.textContent = text;
+    box.append(strong, copy);
+    return box;
+  }
+
+  function makeDiff(host, template, edited) {
+    host.replaceChildren();
+    if (!extras) return;
+    for (const part of extras.diffWords(template, edited)) {
+      if (!part.text.trim()) {
+        host.append(document.createTextNode(part.text));
+        continue;
+      }
+      const span = document.createElement('span');
+      span.className = part.type === 'add' ? 'diff-add' : part.type === 'del' ? 'diff-del' : 'diff-same';
+      span.textContent = part.text;
+      host.append(span);
+    }
+  }
+
   function showResult(result, approved = false) {
     if (!result || !resultContent) return;
     currentResult = result;
     currentApproved = approved;
     if (emptyState) emptyState.hidden = true;
+    const skeleton = $('#pipeline-skeleton');
+    if (skeleton) skeleton.hidden = true;
     resultContent.hidden = false;
     resultContent.replaceChildren();
     clearInterval(stageTimer);
 
+    const evidence = result.evidence || {};
+    const events = cachedEvents.slice();
+    const acknowledged = isAcknowledged(events, result.id);
+    const faqMatch = result.emergency ? null : faqAnswer(result.message || '');
+    const slots = result.category === 'Appointments' && extras
+      ? extras.generateSlots({ now: new Date(), config, bookedSlotIds: bookedSlotIds(events), limit: 3 })
+      : [];
+
     const badges = document.createElement('div');
     badges.className = 'result-badges';
-    for (const [text, type] of [[result.category, ''], [result.priority, result.emergency ? 'emergency' : result.priority === 'Prompt review' ? 'priority' : '']]) {
+    const badgeValues = [
+      [result.category, result.emergency ? 'emergency' : ''],
+      [result.priority, result.emergency ? 'emergency' : result.priority === 'Prompt review' ? 'priority' : ''],
+      [`Tone: ${evidence.toneLabel || 'calm'}`, evidence.toneLabel === 'angry' ? 'emergency' : evidence.toneLabel === 'frustrated' ? 'priority' : ''],
+      [result.assignee || 'Receptionist', ''],
+    ];
+    if (evidence.language) badgeValues.push([`Language cue: ${evidence.language}`, 'priority']);
+    if (evidence.interpreterSuggested) badgeValues.push(['Interpreter may be needed', 'priority']);
+    if (evidence.injectionDetected) badgeValues.push(['Injection text detected', 'emergency']);
+    if (evidence.negatedRedFlags && evidence.negatedRedFlags.length) badgeValues.push(['Negated phrase matched', 'priority']);
+    if (result.category === 'Complaint / feedback') badgeValues.push(['Practice Manager', 'priority']);
+    for (const [text, type] of badgeValues) {
       const badge = document.createElement('span');
       badge.className = `badge ${type}`.trim();
       badge.textContent = text;
@@ -628,20 +885,23 @@
     assigned.textContent = `Assigned: ${result.assignee || 'Receptionist'}`;
     const sla = document.createElement('span');
     sla.textContent = slaText(result);
-    meta.append(assigned, sla);
+    const status = document.createElement('span');
+    status.textContent = `Status: ${approved ? 'approved, not sent' : latestStatusOf(events, result.id)}`;
+    meta.append(assigned, sla, status);
     resultContent.append(meta);
 
     const why = document.createElement('p');
     why.className = 'why';
-    const evidence = result.evidence || {};
     if (result.emergency) {
       const phrases = (result.redFlags || evidence.redFlagPhrases || []).join('”, “');
-      why.textContent = `Why: red-flag phrase “${phrases}” overrides category and urgency.`;
+      why.textContent = `Why: red-flag phrase “${phrases}” overrides category, tone, language, complaint and urgency.`;
     } else {
       const parts = [
         evidence.matchedCategoryTerm ? `category term “${evidence.matchedCategoryTerm}”` : 'no category term (default General enquiry)',
         evidence.matchedPromptWord ? `prompt-review word “${evidence.matchedPromptWord}”` : 'no prompt-review word (routine priority)',
-      ];
+        evidence.toneLabel && evidence.toneLabel !== 'calm' ? `tone ${evidence.toneLabel}` : null,
+        evidence.injectionDetected ? 'injection evidence shown, not obeyed' : null,
+      ].filter(Boolean);
       why.textContent = `Why: ${parts.join('; ')}.`;
     }
     resultContent.append(why);
@@ -653,16 +913,84 @@
       resultContent.append(preview);
     }
 
-    const acknowledged = isAcknowledged(cachedEvents, result.id);
-    if (result.emergency) resultContent.append(makeEmergencyBox(result, acknowledged));
+    if (extras && result.message) {
+      const duplicate = extras.findDuplicate(result.message, events, result.id);
+      if (duplicate) {
+        const warning = infoBox('Possible duplicate enquiry', `This text exactly matches an earlier enquiry (${duplicate.id}). Check the earlier record before taking action. This warning does not change category, priority or emergency handling.`, 'duplicate-warning');
+        warning.setAttribute('role', 'status');
+        resultContent.append(warning);
+      }
+    }
 
-    const stages = buildStages(result);
+    if (result.emergency) resultContent.append(makeEmergencyBox(result, acknowledged));
+    if (evidence.interpreterSuggested) {
+      const tis = (config.interpreterService && config.interpreterService.number) || '131 450';
+      resultContent.append(infoBox('Interpreter may be needed', `A non-English greeting or phrase was detected. Offer a plain-English reply and ask whether an interpreter is wanted. Use the Translating and Interpreting Service on ${tis} (verify before real use). Never auto-translate clinical content.`, 'priority-box'));
+    }
+    if (result.category === 'Complaint / feedback') {
+      resultContent.append(infoBox('Complaint / feedback handling', `Tone score ${evidence.toneScore || 0} (${evidence.toneLabel || 'calm'}). This raises review priority but never lowers an emergency. Route to the Practice Manager and use the complaint reply template.`, 'priority-box'));
+    }
+    if (evidence.injectionDetected) {
+      resultContent.append(infoBox('Integrity check', `Injection-style phrase(s) detected: ${(evidence.injectionPhrases || []).join(', ')}. The text is treated as untrusted content, shown to staff and never obeyed. Emergency wording still wins.`, 'priority-box'));
+    }
+
+    if (faqMatch && faqMatch.best) {
+      const faqBox = document.createElement('div');
+      faqBox.className = `faq-box${faqMatch.lowMatch ? ' low' : ''}`;
+      const heading = document.createElement('strong');
+      heading.textContent = faqMatch.lowMatch ? 'FAQ match below threshold · human review' : `FAQ answer · ${faqMatch.best.entry.id}`;
+      const answer = document.createElement('p');
+      answer.textContent = faqMatch.best.entry.answer;
+      const citation = document.createElement('small');
+      citation.textContent = `Source: “${faqMatch.best.entry.question}” · BM25 score ${faqMatch.score}${faqMatch.lowMatch ? ' · below configured threshold' : ''}. This is a fictional clinic FAQ, not medical advice.`;
+      faqBox.append(heading, answer, citation);
+      resultContent.append(faqBox);
+    }
+
+    if (slots.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'slot-picker';
+      const legend = document.createElement('legend');
+      legend.textContent = 'Synthetic appointment slots · optional';
+      fieldset.append(legend);
+      const noneLabel = document.createElement('label');
+      noneLabel.className = 'slot-option';
+      const none = document.createElement('input');
+      none.type = 'radio';
+      none.name = `appt-slot-${result.id}`;
+      none.value = '';
+      none.checked = true;
+      const noneText = document.createElement('span');
+      noneText.textContent = 'No slot · handle manually';
+      noneLabel.append(none, noneText);
+      fieldset.append(noneLabel);
+      for (const slot of slots) {
+        const label = document.createElement('label');
+        label.className = 'slot-option';
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = `appt-slot-${result.id}`;
+        radio.value = slot.slotId;
+        radio.dataset.slotLabel = slot.label;
+        const text = document.createElement('span');
+        text.textContent = slot.label;
+        label.append(radio, text);
+        fieldset.append(label);
+      }
+      const note = document.createElement('p');
+      note.className = 'chart-note';
+      note.textContent = 'Approval books the selected slot. A second approval for the same slot is blocked and tested.';
+      fieldset.append(note);
+      resultContent.append(fieldset);
+    }
+
+    const stages = buildStages(result, { faqMatch, slots });
     const list = document.createElement('div');
     list.className = 'stage-list';
     list.setAttribute('aria-label', 'Decision pipeline stages');
     stageEls = stages.map((stage, index) => {
       const item = document.createElement('div');
-      item.className = `stage${result.emergency && index === 0 ? ' emergency-stage' : ''}`;
+      item.className = `stage${result.emergency && index === 3 ? ' emergency-stage' : ''}`;
       const number = document.createElement('span');
       number.className = 'stage-num';
       number.textContent = String(index + 1).padStart(2, '0');
@@ -703,62 +1031,261 @@
       resultContent.append(checklist);
     }
 
+    if (extras && result.message) {
+      const counterfactual = extras.counterfactuals(result.message, rules, classifier.classify);
+      const changed = counterfactual.results.filter(item => item.changed);
+      const details = document.createElement('details');
+      details.className = 'counterfactual-box';
+      const summary = document.createElement('summary');
+      summary.textContent = 'What would change this result?';
+      const intro = document.createElement('p');
+      intro.className = 'chart-note';
+      intro.textContent = 'Each probe removes or negates one matched phrase and re-runs the same local classifier.';
+      details.append(summary, intro);
+      if (changed.length) {
+        const items = document.createElement('ul');
+        for (const item of changed.slice(0, 6)) {
+          const entry = document.createElement('li');
+          entry.textContent = `${item.label} → ${item.category} · ${item.priority}${item.emergency ? ' · still emergency' : ''}`;
+          items.append(entry);
+        }
+        details.append(items);
+      } else {
+        const none = document.createElement('p');
+        none.className = 'chart-note';
+        none.textContent = 'No matched phrase produced a different category or priority in this probe.';
+        details.append(none);
+      }
+      resultContent.append(details);
+    }
+
     if (pipelineControls) pipelineControls.hidden = false;
     animateStages();
+
+    const audit = document.createElement('details');
+    audit.className = 'enquiry-audit';
+    const auditSummary = document.createElement('summary');
+    auditSummary.textContent = `Audit trail for this enquiry (${events.filter(event => event.id === result.id).length})`;
+    const auditList = document.createElement('ul');
+    for (const event of events.filter(event => event.id === result.id)) {
+      const item = document.createElement('li');
+      item.textContent = `${event.timestamp ? new Date(event.timestamp).toLocaleString('en-AU') : '—'} · ${String(event.type || 'event').replaceAll('_', ' ')}${event.hash ? ` · ${event.hash.slice(0, 10)}` : ''}`;
+      auditList.append(item);
+    }
+    audit.append(auditSummary, auditList);
+    resultContent.append(audit);
 
     if (!result.emergency || acknowledged) {
       const label = document.createElement('p');
       label.className = 'decision-label';
-      label.textContent = approved ? 'STAFF REPLY · APPROVED, NOT SENT' : 'STAFF REPLY DRAFT · EDIT BEFORE USE';
-      const reply = document.createElement('textarea');
-      reply.className = 'reply-box';
-      reply.value = result.reply;
-      reply.setAttribute('aria-label', 'Staff reply draft');
-      reply.readOnly = approved;
+      label.textContent = approved ? 'STAFF REPLY · APPROVED, NOT SENT' : 'REPLY STUDIO · EDIT BEFORE USE';
+      resultContent.append(label);
+
+      const studio = document.createElement('div');
+      studio.className = 'reply-studio';
+      const controls = document.createElement('div');
+      controls.className = 'studio-controls';
+      const toneLabel = document.createElement('label');
+      toneLabel.textContent = 'Tone';
+      const toneSelect = document.createElement('select');
+      toneSelect.id = 'reply-tone';
+      for (const [value, text] of [['warm', 'Warm'], ['formal', 'Formal'], ['brief', 'Brief']]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        toneSelect.append(option);
+      }
+      toneLabel.append(toneSelect);
+      const channelLabel = document.createElement('label');
+      channelLabel.textContent = 'Channel';
+      const channelSelect = document.createElement('select');
+      channelSelect.id = 'reply-channel';
+      for (const [value, text] of [['email', 'Email'], ['sms', 'SMS (320 chars)']]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        channelSelect.append(option);
+      }
+      channelLabel.append(channelSelect);
+      controls.append(toneLabel, channelLabel);
+      studio.append(controls);
+
+      const textarea = document.createElement('textarea');
+      textarea.className = 'reply-box';
+      textarea.id = 'reply-draft';
+      textarea.value = defaultDraft(result, faqMatch);
+      textarea.setAttribute('aria-label', 'Staff reply draft');
+      textarea.readOnly = approved || result.emergency;
+      const template = textarea.value;
+      studio.append(textarea);
+
+      const measures = document.createElement('div');
+      measures.className = 'studio-measures';
+      const readability = document.createElement('span');
+      readability.id = 'readability-score';
+      const advice = document.createElement('span');
+      advice.id = 'advice-status';
+      const smsCount = document.createElement('span');
+      smsCount.id = 'sms-count';
+      measures.append(readability, advice, smsCount);
+      studio.append(measures);
+
+      const diffLabel = document.createElement('p');
+      diffLabel.className = 'decision-label';
+      diffLabel.textContent = 'DIFF · TEMPLATE VS YOUR EDIT';
+      const diff = document.createElement('div');
+      diff.className = 'reply-diff';
+      diff.id = 'reply-diff';
+      studio.append(diffLabel, diff);
+
       const actions = document.createElement('div');
       actions.className = 'reply-actions';
       const note = document.createElement('span');
       note.className = `review-note${approved ? ' approved' : ''}`;
       note.textContent = approved ? 'Approved by staff · recorded in history · not sent' : 'Human approval required before sending';
       actions.append(note);
+
+      let approveButton = null;
+      const roleSelect = document.createElement('select');
+      roleSelect.className = 'settings-select';
+      roleSelect.id = 'approval-role';
+      roleSelect.setAttribute('aria-label', 'Approval role');
+      for (const role of ['Receptionist', 'Practice Nurse', 'GP', 'Practice Manager']) {
+        const option = document.createElement('option');
+        option.value = role;
+        option.textContent = role;
+        roleSelect.append(option);
+      }
+      roleSelect.value = staffRole;
+      roleSelect.disabled = approved;
+      actions.append(roleSelect);
+
       if (!approved) {
-        const approve = document.createElement('button');
-        approve.className = 'button button-approve';
-        approve.textContent = 'Approve draft';
-        approve.addEventListener('click', async () => {
+        approveButton = document.createElement('button');
+        approveButton.className = 'button button-approve';
+        approveButton.type = 'button';
+        approveButton.textContent = 'Approve draft';
+        actions.append(approveButton);
+      }
+
+      function refreshStudio() {
+        const value = textarea.value;
+        const readabilityValue = extras ? extras.readability(value) : { score: 0, grade: 'Unavailable', words: 0 };
+        readability.textContent = `Readability: ${readabilityValue.score} (${readabilityValue.grade}) · ${readabilityValue.words} words`;
+        const hits = extras ? extras.medicalAdviceHits(value) : [];
+        advice.textContent = hits.length ? `Blocked medical-advice wording: ${hits.join(', ')}` : 'Medical-advice blocklist: clear';
+        advice.className = hits.length ? 'blocked' : 'clear';
+        const isSms = channelSelect.value === 'sms';
+        smsCount.textContent = isSms ? `SMS: ${value.length} / 320 characters` : 'Channel: email';
+        smsCount.className = isSms && value.length > 320 ? 'blocked' : '';
+        if (approveButton) {
+          const blocked = hits.length > 0 || (isSms && value.length > 320);
+          approveButton.disabled = blocked;
+          approveButton.title = blocked ? 'Resolve the blocklist or SMS length first.' : 'Record human approval. Nothing is sent.';
+        }
+        makeDiff(diff, template, value);
+      }
+
+      toneSelect.addEventListener('change', () => {
+        if (approved) return;
+        if (extras) {
+          const variants = extras.replyVariants({ result, faqEntry: faqMatch && faqMatch.best && !faqMatch.lowMatch ? faqMatch.best.entry : null, config });
+          textarea.value = variants[toneSelect.value] || textarea.value;
+        }
+        refreshStudio();
+      });
+      channelSelect.addEventListener('change', () => {
+        if (channelSelect.value === 'sms' && textarea.value.length > 320 && extras) {
+          const variants = extras.replyVariants({ result, faqEntry: faqMatch && faqMatch.best && !faqMatch.lowMatch ? faqMatch.best.entry : null, config });
+          textarea.value = variants.brief;
+          toneSelect.value = 'brief';
+          notify('Draft shortened to the brief SMS variant. Edit it before approval.');
+        }
+        refreshStudio();
+      });
+      textarea.addEventListener('input', refreshStudio);
+      roleSelect.addEventListener('change', () => setStaffRole(roleSelect.value));
+
+      if (approveButton) {
+        approveButton.addEventListener('click', async () => {
+          const role = roleSelect.value;
+          setStaffRole(role);
+          const value = textarea.value.trim();
+          if (!value) { notify('Write or generate a reply before approval.'); return; }
+          if (extras && extras.medicalAdviceHits(value).length) { notify('Approval blocked: the draft contains medical-advice wording.'); return; }
+          if (channelSelect.value === 'sms' && value.length > 320) { notify('Approval blocked: the SMS draft is over 320 characters.'); return; }
+          if (!canApprove(result.category, role)) {
+            notify(`${role} cannot approve a ${result.category} reply in this demo. Change the approval role or route it to ${(APPROVAL_ROLES[result.category] || ['Receptionist']).join(' / ')}.`);
+            return;
+          }
+          const freshEvents = await getEvents();
+          if (result.emergency && !isAcknowledged(freshEvents, result.id)) {
+            notify('Acknowledge the 000 instruction before approving the emergency reply.');
+            return;
+          }
+          const selected = document.querySelector(`input[name="appt-slot-${CSS.escape(result.id)}"]:checked`);
+          const slotId = selected && selected.value ? selected.value : null;
+          if (slotId && bookedSlotIds(freshEvents).includes(slotId)) {
+            notify('That slot is already booked. Choose another slot or handle it manually.');
+            return;
+          }
           const approvedBy = window.prompt('Enter staff name or initials to record approval:');
           if (!approvedBy || !approvedBy.trim()) return;
-          approve.disabled = true;
+          approveButton.disabled = true;
           try {
             if (isStatic) {
-              const events = loadStaticEvents();
-              if (events.some(item => item.type === 'reply_approved' && item.id === result.id)) {
-                throw new Error('This reply is already approved.');
+              if (freshEvents.some(item => item.type === 'reply_approved' && item.id === result.id)) throw new Error('This reply is already approved.');
+              await appendStaticEvent({
+                type: 'reply_approved',
+                id: result.id,
+                approvedBy: approvedBy.trim(),
+                staffRole: role,
+                replyText: classifier.maskSensitive(value),
+                tone: toneSelect.value,
+                channel: channelSelect.value,
+                faqId: faqMatch && faqMatch.best ? faqMatch.best.entry.id : null,
+                slotId,
+              });
+              if (slotId) {
+                const latestEvents = loadStaticEvents();
+                if (bookedSlotIds(latestEvents).includes(slotId)) throw new Error('That slot was booked a moment ago. Choose another slot.');
+                await appendStaticEvent({ type: 'appointment_booked', id: result.id, slotId, bookedBy: approvedBy.trim(), slotLabel: selected.dataset.slotLabel || slotId });
               }
-              await appendStaticEvent({ type: 'reply_approved', id: result.id, approvedBy: approvedBy.trim() });
             } else {
               await request(`/api/enquiries/${encodeURIComponent(result.id)}/approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ approvedBy }),
+                body: JSON.stringify({ approvedBy, staffRole: role, replyText: value, tone: toneSelect.value, channel: channelSelect.value, faqId: faqMatch && faqMatch.best ? faqMatch.best.entry.id : null, slotId }),
               });
             }
             showResult(result, true);
             await loadHistory();
-            notify('Approval recorded. The draft has not been sent.');
+            notify(slotId ? 'Approval recorded and the selected synthetic slot is booked. Nothing was sent.' : 'Approval recorded. The draft has not been sent.');
           } catch (error) {
             notify(error.message);
-            approve.disabled = false;
+            if (approveButton) approveButton.disabled = false;
           }
         });
-        actions.append(approve);
       }
-      resultContent.append(label, reply, actions);
+
+      studio.append(actions);
+      resultContent.append(studio);
+      refreshStudio();
+      if (result.emergency) {
+        const lock = document.createElement('p');
+        lock.className = 'ack-locked';
+        lock.textContent = 'Emergency template is fixed. Tone and FAQ controls cannot replace the 000 wording.';
+        resultContent.append(lock);
+      }
     } else {
       const locked = document.createElement('p');
       locked.className = 'ack-locked';
       locked.textContent = 'The reply draft is locked until a staff member acknowledges the 000 instruction above.';
       resultContent.append(locked);
+    }
+
+    if (result.emergency) {
+      notifyBrowser('Emergency wording detected', 'Open Clinic Mission Control and relay the 000 instruction. This is a synthetic demo.');
     }
 
     document.dispatchEvent(new CustomEvent('clinic:result', { detail: { result, approved } }));
@@ -810,9 +1337,17 @@
     ? 'Static mode stores events in this browser’s localStorage only. It makes no application network calls.'
     : 'Server mode appends events to the local Node data file. Nothing leaves this machine.');
 
+  const messageError = $('#message-error');
+  function setMessageError(text) {
+    if (!messageError) return;
+    messageError.textContent = text || '';
+    messageError.hidden = !text;
+    if (messageInput) messageInput.setAttribute('aria-invalid', text ? 'true' : 'false');
+  }
   if (messageInput) {
     messageInput.addEventListener('input', () => {
       setText('#char-count', `${messageInput.value.length.toLocaleString('en-AU')} / 2,000`);
+      if (messageInput.value.trim()) setMessageError('');
     });
   }
   document.querySelectorAll('.example').forEach(button => button.addEventListener('click', () => {
@@ -842,16 +1377,34 @@
   if (form) {
     form.addEventListener('submit', async event => {
       event.preventDefault();
+      const value = String(messageInput ? messageInput.value : '').trim();
+      if (!value) {
+        setMessageError('Enter a fictional enquiry before triaging.');
+        if (messageInput) messageInput.focus();
+        return;
+      }
+      if (value.length > 2000) {
+        setMessageError('Keep the message under 2,000 characters.');
+        if (messageInput) messageInput.focus();
+        return;
+      }
+      setMessageError('');
       const button = form.querySelector('[type="submit"]');
       if (button) button.disabled = true;
+      const skeleton = $('#pipeline-skeleton');
+      if (emptyState) emptyState.hidden = true;
+      if (resultContent) resultContent.hidden = true;
+      if (skeleton) skeleton.hidden = false;
       try {
-        const result = await createEnquiry(messageInput.value);
+        const result = await createEnquiry(value);
         showResult(result);
         await loadHistory();
         notify(result.emergency ? 'Emergency wording flagged. Relay the 000 instruction now.' : 'Enquiry triaged and saved to the local history.');
       } catch (error) {
         notify(error.message);
+        if (emptyState) emptyState.hidden = false;
       } finally {
+        if (skeleton) skeleton.hidden = true;
         if (button) button.disabled = false;
       }
     });
@@ -862,7 +1415,7 @@
 
   window.ClinicDesk = {
     isStatic,
-    rules,
+    get rules() { return rules; },
     config,
     classifier,
     getEvents,
@@ -874,6 +1427,7 @@
     simulateDay,
     openOldestEmergency,
     notify,
+    notifyBrowser,
     formatDuration,
     slaText,
     hashText,
@@ -883,6 +1437,17 @@
     getEventsCache: () => cachedEvents.slice(),
     getCurrentResult: () => currentResult,
     isAcknowledged,
+    exportCsv,
+    exportFhir,
+    setStatus,
+    setRules,
+    setStaffRole,
+    clearLocalData,
+    faqAnswer,
+    bookedSlotIds,
+    latestStatusOf,
+    canApprove,
+    getStaffRole: () => staffRole,
   };
 
   loadHistory();

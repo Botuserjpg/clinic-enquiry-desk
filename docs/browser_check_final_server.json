@@ -1,0 +1,118 @@
+{
+  "url": "http://127.0.0.1:3104/",
+  "serverMode": true,
+  "title": "Clinic Mission Control — synthetic triage demo",
+  "mode": "SERVER DEMO",
+  "initial": {
+    "title": "Clinic Mission Control — synthetic triage demo",
+    "mode": "SERVER DEMO",
+    "views": 8,
+    "navItems": 9,
+    "activeView": "inbox",
+    "heroRecall": "100%",
+    "onboardingVisible": true,
+    "emergencyStripHidden": true,
+    "emergencyGate": true,
+    "hasSkipLink": true,
+    "localOnly": true
+  },
+  "triage": {
+    "visible": true,
+    "text": "AppointmentsRoutineTone: calmReceptionistAssigned: ReceptionistSLA: due in 8hStatus: openWhy: category term “appointment”; no prompt-review word (routine priority).Masked message stored locally: Hi, could I book an appointment next week?Possible duplicate enquiryThis text exactly matches an earlier enquiry (55d08352-1b6d-437a-946a-e39805ecee24). Check the earlier record before taking action. This warning does not change category, priority or emergency handling.FAQ answer · FAQ-BOOKINGYou can book by replying to this enquiry, calling reception during opening hours, or using the clinic's online ",
+    "stages": 8,
+    "faq": true,
+    "slots": 4,
+    "studio": true,
+    "audit": true
+  },
+  "emergency": {
+    "emergencyBox": true,
+    "locked": true,
+    "stripVisible": true,
+    "stripCount": "1",
+    "text": "EmergencyEmergency wordingTone: calmPractice NurseAssigned: Practice NurseSLA: relay nowStatus: openWhy: red-flag phrase “chest pain”, “cannot breathe” overrides category, tone, language, complaint and urgency.Masked message stored locally: I have chest pain and cannot breathe.Possible duplicate enquiryThis text exactly matches an earlier enquiry (d0ff9afd-a7e2-458c-8bc6-5c1b4f3197f0). Check the earlier record before taking action. This warning does not change category, priority or emergency han"
+  },
+  "dashboard": {
+    "cards": 8,
+    "swimlanes": 4,
+    "timeline": 10,
+    "workloadBars": 4,
+    "trend": "Emergency clusterTwo emergency phrase matches within six hours. Demo signal for manager review only, never a diagnosis.Z-score threshold 2 with a minimum of 3 arrivals in an hour. 1 signal(s) from 17 ",
+    "total": "17",
+    "reviewRate": "35.3%",
+    "ack": "<1 min"
+  },
+  "queue": {
+    "rows": 17,
+    "audits": 17,
+    "count": "17"
+  },
+  "rulesLab": {
+    "gate": "Gate passed: emergency recall 100.0% on 1,500 synthetic enquiries. Saving is allowed, but a human still reviews every reply.",
+    "gateClass": "rules-gate good",
+    "metrics": 6,
+    "saveDisabled": false
+  },
+  "safety": {
+    "metricCards": 5,
+    "redteam": "EmergencyEmergency wordingRoute: Practice NurseSLA: relay nowEmergency phrase override: cannot breathe. No other rule can downgrade this result.Injection text: ignore previous instructionsCounterfactual probes (local, same rules):Without “cannot breathe” → General enquiry · Routine",
+    "emergencyClass": true,
+    "evalNote": "Source: docs/evaluation_metrics.json · 1,500 synthetic rows · seed 20261030 · labels kept separately. Emergency recall is measured on rows labelled Emergency."
+  },
+  "trustCenter": {
+    "checks": [
+      {
+        "name": "Emergency precedence",
+        "state": "PASS"
+      },
+      {
+        "name": "Negated emergency remains escalated",
+        "state": "PASS"
+      },
+      {
+        "name": "Evaluation recall gate",
+        "state": "PASS"
+      },
+      {
+        "name": "Refill routes to GP review",
+        "state": "PASS"
+      },
+      {
+        "name": "Double-booking prevention",
+        "state": "PASS"
+      },
+      {
+        "name": "Privacy masking preserves emergency number",
+        "state": "PASS"
+      },
+      {
+        "name": "Tamper detection hash primitive",
+        "state": "PASS"
+      }
+    ],
+    "hazardLink": true,
+    "reviewerPath": true
+  },
+  "accessibility": {
+    "reducedMotionHonoured": true,
+    "skipLink": true,
+    "messageLabel": true
+  },
+  "simulator": {
+    "patternBars": 24,
+    "capacity": "15 open / 25 teaching-model capacity 60% pressure. Assumed contacts per fictional shift: receptionist 8, practice nurse 5, GP 4. Adjustable assumption, not a workforce plan.",
+    "liveCards": 3
+  },
+  "command": {
+    "open": true,
+    "results": 1,
+    "first": "Go to DashboardNAV",
+    "keyboardFocus": true
+  },
+  "apiRequestCount": 19,
+  "externalRequestCount": 0,
+  "environmentInjectedRequestCount": 11,
+  "consoleErrors": [],
+  "pageExceptions": [],
+  "screenshots": []
+}

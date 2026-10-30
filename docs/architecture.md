@@ -9,6 +9,8 @@
 - `config/clinic.json` holds a fictional clinic name, opening hours, public holidays, and a synthetic staff roster. `config/clinic.js` is its generated browser bundle.
 - `server.js` serves the page and persists server-mode events in `data/events.jsonl`, linked by SHA-256 hashes.
 - `app.js` renders intake, decisions, routing, approval, dashboard, integrity checking, simulation, and recent history. It selects server or static mode at load time.
+- `extras.js` contains local FAQ, calendar, duplicate-warning, export, trend and reply-studio helpers. An exact duplicate warning is advisory; it never changes triage.
+- `safety-net.js` renders the synthetic evaluation results, red-team console, and user-triggered Trust Center checks in the Safety view.
 - `index.html` is the root entry point for both Node hosting and GitHub Pages. All asset URLs are relative.
 
 ## Rule order
@@ -31,4 +33,8 @@ Each event stores `previousHash`, a timestamp, and a hash over the previous hash
 
 ## Extras
 
-The interface also provides role routing, service-level timers, structured-identifier masking, a verify-integrity action, and a simulate-clinic-day action. The simulated messages are fictional and are added through the same enquiry path as manual entries.
+The interface also provides role routing, service-level timers, structured-identifier masking, exact-text duplicate advisories, a verify-integrity action, and a simulate-clinic-day action. The simulated messages are fictional and are added through the same enquiry path as manual entries.
+
+The Rules Lab uses a generated browser bundle that keeps evaluation messages and expected labels in distinct arrays. Only the evaluation view reads the labels; `classifier.js` receives a message and rules. It scores all 1,500 rows before and after a draft edit.
+
+The Trust Center checks the emergency rule, measured evaluation recall, configured refill route, slot exclusion, privacy masking and the local hash function when the reviewer clicks **Run self-tests**. API role enforcement is tested against the Node server separately. These checks are software checks, not clinical validation.

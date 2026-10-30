@@ -297,6 +297,115 @@
     result.append(strong, label);
   }
 
+  function renderWorkload() {
+    const chart = $('#chart-workload');
+    if (!chart) return;
+    chart.replaceChildren();
+    const pending = metrics ? metrics.pending : [];
+    const counts = roles.map(role => pending.filter(event => (event.assignee || 'Receptionist') === role).length);
+    const max = Math.max(1, ...counts);
+    const colors = ['var(--teal)', 'var(--blue)', 'var(--violet)', 'var(--amber)'];
+    counts.forEach((count, index) => {
+      const height = count ? Math.max(6, (count / max) * 78) : 2;
+      const x = 36 + index * 122;
+      chart.append(svgElement('rect', { x, y: 96 - height, width: 78, height, rx: 3, fill: colors[index], opacity: count ? 0.85 : 0.22 }));
+      chart.append(textElement(String(count), { x: x + 39, y: 89 - height, 'text-anchor': 'middle', fill: 'var(--ink-soft)', 'font-size': 10, 'font-family': 'var(--mono)' }));
+      chart.append(textElement(roles[index], { x: x + 39, y: 112, 'text-anchor': 'middle', fill: 'var(--muted)', 'font-size': 8, 'font-family': 'var(--mono)' }));
+    });
+    chart.append(svgElement('line', { x1: 20, y1: 98, x2: 500, y2: 98, stroke: 'var(--line)', 'stroke-width': 1 }));
+    chart.setAttribute('aria-label', `Open enquiries by role: ${roles.map((role, index) => `${role} ${counts[index]}`).join(', ')}.`);
+  }
+
+  function renderTrend() {
+    const host = $('#trend-signals');
+    if (!host) return;
+    host.replaceChildren();
+    const extras = window.ClinicExtras;
+    const signals = extras && typeof extras.spikeSignals === 'function' ? extras.spikeSignals(events) : [];
+    if (!signals.length) {
+      const empty = document.createElement('p');
+      empty.className = 'signal-empty';
+      empty.textContent = 'No z-score spike or emergency-cluster signal in the current local history. Add examples or run the simulator to populate the trend view. Signals need at least three hourly buckets.';
+      host.append(empty);
+      return;
+    }
+    for (const signal of signals.slice(0, 6)) {
+      const row = document.createElement('div');
+      row.className = `signal ${signal.type === 'symptom-cluster' ? 'cluster' : 'spike'}`;
+      const label = document.createElement('b');
+      label.textContent = signal.type === 'symptom-cluster' ? 'Emergency cluster' : 'Volume spike';
+      const detail = document.createElement('span');
+      detail.textContent = signal.type === 'symptom-cluster'
+        ? `${signal.note}`
+        : `${signal.category} · ${signal.count} in the latest hour · mean ${signal.mean} · z ${signal.z}`;
+      row.append(label, detail);
+      host.append(row);
+    }
+    const note = document.createElement('p');
+    note.className = 'chart-note';
+    note.textContent = `Z-score threshold 2 with a minimum of 3 arrivals in an hour. ${signals.length} signal(s) from ${events.filter(event => event.type === 'enquiry_received').length} local arrivals. Demo signal for manager review only.`;
+    host.append(note);
+  }
+
+  function renderSimPattern() {
+    const host = $('#sim-pattern');
+    if (!host) return;
+    host.replaceChildren();
+    const pattern = [1, 2, 3, 5, 7, 9, 8, 6, 5, 6, 7, 5, 4, 5, 7, 8, 6, 4, 3, 2, 1, 1, 1, 1];
+    const max = Math.max(...pattern);
+    pattern.forEach((value, hour) => {
+      const bar = document.createElement('span');
+      bar.style.height = `${Math.max(4, (value / max) * 100)}%`;
+      if (value >= max - 1) bar.className = 'peak';
+      bar.title = `${String(hour).padStart(2, '0')}:00 · seeded arrival weight ${value}`;
+      host.append(bar);
+    });
+    host.setAttribute('aria-label', 'Seeded hourly arrival pattern: morning peak, lunch lull, afternoon wave.');
+  }
+
+  function renderSimLive() {
+    const host = $('#sim-live');
+    if (!host) return;
+    host.replaceChildren();
+    const live = metrics || { total: 0, review: 0, emergencyPending: 0, slaBreaches: 0 };
+    const cards = [
+      ['Open queue', live.review, 'awaiting approval'],
+      ['Emergency', live.emergencyPending, 'awaiting acknowledgement'],
+      ['SLA breaches', live.slaBreaches, 'computed from timestamps'],
+    ];
+    for (const [label, value, note] of cards) {
+      const article = document.createElement('article');
+      article.className = 'metric';
+      const span = document.createElement('span');
+      span.textContent = label;
+      const strong = document.createElement('strong');
+      strong.textContent = Number(value || 0).toLocaleString('en-AU');
+      const small = document.createElement('small');
+      small.textContent = note;
+      article.append(span, strong, small);
+      host.append(article);
+    }
+    renderSimCapacity();
+  }
+
+  function renderSimCapacity() {
+    const host = $('#sim-capacity');
+    if (!host) return;
+    const value = id => Number((($(id) || {}).value) || 0);
+    const reception = value('#staff-reception');
+    const nurses = value('#staff-nurses');
+    const gps = value('#staff-gps');
+    const capacity = reception * 8 + nurses * 5 + gps * 4;
+    const open = metrics ? metrics.review : 0;
+    const pressure = capacity ? Math.round((open / capacity) * 100) : 100;
+    host.replaceChildren();
+    const strong = document.createElement('strong');
+    strong.textContent = `${open} open / ${capacity} teaching-model capacity`;
+    const note = document.createElement('span');
+    note.textContent = ` ${pressure}% pressure. Assumed contacts per fictional shift: receptionist 8, practice nurse 5, GP 4. Adjustable assumption, not a workforce plan.`;
+    host.append(strong, note);
+  }
+
   function renderDashboard() {
     renderSwimlanes();
     renderTimeline();
@@ -304,16 +413,22 @@
     renderDonut();
     renderAgeing();
     renderSlaGauge();
+    renderWorkload();
+    renderTrend();
     renderAssumption();
+    renderSimPattern();
+    renderSimLive();
   }
 
   function scrollToDashboard() {
-    const dashboard = $('#dashboard');
+    if (window.ClinicViews) window.ClinicViews.showView('dashboard');
+    const dashboard = $('#view-dashboard');
     if (dashboard) dashboard.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
   }
 
   async function triageMessage(message) {
     if (!window.ClinicDesk) throw new Error('The demo core has not loaded.');
+    if (window.ClinicViews) window.ClinicViews.showView('inbox');
     const result = await window.ClinicDesk.createEnquiry(message);
     window.ClinicDesk.showResult(result);
     await window.ClinicDesk.loadHistory();
@@ -391,14 +506,25 @@
 
   // ---------- command palette ----------
   function commandDefinitions() {
+    const view = name => () => { if (window.ClinicViews) window.ClinicViews.showView(name); };
     return [
+      { label: 'Go to Inbox', hint: 'NAV', icon: 'i-inbox', run: view('inbox') },
+      { label: 'Go to Queue', hint: 'NAV', icon: 'i-list', run: view('queue') },
+      { label: 'Go to Dashboard', hint: 'NAV', icon: 'i-grid', run: view('dashboard') },
+      { label: 'Go to Simulator', hint: 'NAV', icon: 'i-play', run: view('simulator') },
+      { label: 'Go to Rules Lab', hint: 'NAV', icon: 'i-flask', run: view('rules') },
+      { label: 'Go to Safety Net', hint: 'NAV', icon: 'i-shield', run: view('safety') },
+      { label: 'Go to Prompt Lab', hint: 'NAV', icon: 'i-book', run: view('prompt') },
+      { label: 'Go to Settings', hint: 'NAV', icon: 'i-settings', run: view('settings') },
       { label: 'Triage an appointment example', hint: 'INTAKE', icon: 'i-inbox', run: () => { fillMessage('Hi, could I book an appointment next week?'); } },
       { label: 'Triage an emergency example', hint: 'SAFETY', icon: 'i-alert', run: async () => { await triageMessage('I have chest pain and feel short of breath.'); } },
       { label: 'Watch the 60-second auto-demo', hint: 'DEMO', icon: 'i-play', run: startAutoDemo },
       { label: simRunning ? 'Stop live simulation' : 'Start live simulation', hint: 'SIM', icon: 'i-clock', run: () => { simRunning ? stopSimulation() : startSimulation(); } },
+      { label: 'Export enquiries as CSV', hint: 'EXPORT', icon: 'i-download', run: () => window.ClinicDesk.exportCsv() },
+      { label: 'Export FHIR-shaped JSON', hint: 'EXPORT', icon: 'i-download', run: () => window.ClinicDesk.exportFhir() },
       { label: 'Verify history integrity', hint: 'AUDIT', icon: 'i-shield', run: () => window.ClinicDesk.verifyIntegrity() },
       { label: 'Simulate a tamper (display only)', hint: 'AUDIT', icon: 'i-alert', run: () => window.ClinicDesk.simulateTamper() },
-      { label: 'Open dashboard', hint: 'NAV', icon: 'i-route', run: scrollToDashboard },
+      { label: 'Show onboarding hints again', hint: 'HELP', icon: 'i-spark', run: () => { const button = $('#reset-onboarding'); if (button) button.click(); } },
       { label: 'Open shift handover', hint: 'PAGE', icon: 'i-print', run: () => { window.location.href = 'handover.html'; } },
       { label: 'Open prompt lab', hint: 'PAGE', icon: 'i-spark', run: () => { window.location.href = 'prompt-lab.html'; } },
       { label: 'Open safety case', hint: 'PAGE', icon: 'i-shield', run: () => { window.location.href = 'safety.html'; } },
@@ -684,6 +810,21 @@
 
   const minutesSlider = $('#minutes-per-enquiry');
   if (minutesSlider) minutesSlider.addEventListener('input', renderAssumption);
+
+  for (const id of ['#staff-reception', '#staff-nurses', '#staff-gps']) {
+    const slider = $(id);
+    if (!slider) continue;
+    const output = $(`${id}-value`);
+    slider.addEventListener('input', () => {
+      if (output) output.textContent = slider.value;
+      renderSimCapacity();
+    });
+  }
+
+  document.addEventListener('clinic:view', event => {
+    if (event.detail && event.detail.view === 'dashboard') renderDashboard();
+    if (event.detail && event.detail.view === 'simulator') renderSimLive();
+  });
 
   setupVoice();
   updateSimButtons();

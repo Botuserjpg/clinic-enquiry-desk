@@ -18,12 +18,12 @@ The project uses only plain HTML, CSS and JavaScript with inline SVG — no CDN,
 Verification from the final working session:
 
 - `node --check`: all JavaScript files passed.
-- `npm test`: 6/6 passed.
-- `python -m unittest discover -s tests -v`: 12/12 passed.
-- Evaluation: 12/12 category, priority and red-flag matches; 4/4 emergency recall on the synthetic fixture.
-- Headless Chrome: static mode at the HTTP root, subpath and `file://`; zero `/api/` requests; no page exceptions or console errors; server mode checked separately.
+- `npm test`: 19/19 passed.
+- `python -m pytest -q`: 22 passed, 12 subtests passed.
+- Evaluation: 1,500 synthetic rows; 91.87% exact category-and-priority accuracy (95% bootstrap CI 90.4%–93.2%); emergency recall 232/232 (100%); 50 emergency false positives.
+- Final headless Edge checks on a fresh copy covered static root, GitHub-style subpath, `file://`, and server mode. Static modes made zero `/api/` requests; all modes had zero unexpected external requests, console errors or page exceptions. All seven Trust Center checks passed.
 
-These are fixture-level rule-consistency results, not clinical validation. The prototype is a demonstration, not a medical device, and must not be used with real patient information. The README, safety case and limits page describe the constraints honestly.
+These are fixture-level rule-consistency results, not clinical validation. The prototype is a synthetic demonstration and must not be used with real patient information. The README, safety case and limits page describe the constraints honestly.
 
 The repository also includes prompt history, a build log, architecture and assumption notes, a printable shift handover, and a skippable auto-demo.
 

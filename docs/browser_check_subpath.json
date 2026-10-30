@@ -1,0 +1,78 @@
+{
+  "url": "http://127.0.0.1:8123/clinic-enquiry-desk/",
+  "serverMode": false,
+  "title": "Clinic Mission Control — synthetic triage demo",
+  "mode": "STATIC DEMO",
+  "initial": {
+    "title": "Clinic Mission Control — synthetic triage demo",
+    "mode": "STATIC DEMO",
+    "views": 8,
+    "navItems": 9,
+    "activeView": "inbox",
+    "heroRecall": "100%",
+    "onboardingVisible": true,
+    "emergencyStripHidden": true,
+    "emergencyGate": true,
+    "hasSkipLink": true,
+    "localOnly": true
+  },
+  "triage": {
+    "visible": true,
+    "text": "AppointmentsRoutineTone: calmReceptionistAssigned: ReceptionistSLA: due in 8hStatus: openWhy: category term “appointment”; no prompt-review word (routine priority).Masked message stored locally: Hi, could I book an appointment next week?FAQ answer · FAQ-BOOKINGYou can book by replying to this enquiry, calling reception during opening hours, or using the clinic's online booking page. Tell us the appointment type and your preferred day.Source: “How do I book an appointment?” · BM25 score 5.724. This is a fictional clinic FAQ, not medical advice.Synthetic appointment slots · optionalNo slot · han",
+    "stages": 8,
+    "faq": true,
+    "slots": 4,
+    "studio": true,
+    "audit": true
+  },
+  "emergency": {
+    "emergencyBox": true,
+    "locked": true,
+    "stripVisible": true,
+    "stripCount": "1",
+    "text": "EmergencyEmergency wordingTone: calmPractice NurseAssigned: Practice NurseSLA: relay nowStatus: openWhy: red-flag phrase “chest pain”, “cannot breathe” overrides category, tone, language, complaint and urgency.Masked message stored locally: I have chest pain and cannot breathe. EMERGENCY WORDING DETECTEDCALL 000 NOWTell the sender to call 000 now. Do not wait for a reply from the clinic. This demo does not contact the sender or emergency services.Emergency 000Lifeline 13 11 14Healthdirect 1800 0"
+  },
+  "dashboard": {
+    "cards": 8,
+    "swimlanes": 4,
+    "timeline": 10,
+    "workloadBars": 4,
+    "trend": "No z-score spike or emergency-cluster signal in the current local history. Add examples or run the simulator to populate the trend view. Signals need at least three hourly buckets.",
+    "total": "14",
+    "reviewRate": "28.6%",
+    "ack": "—"
+  },
+  "queue": {
+    "rows": 14,
+    "audits": 14,
+    "count": "14"
+  },
+  "rulesLab": {
+    "gate": "Gate passed: emergency recall 100.0% on 12 fixtures. Saving is allowed, but a human still reviews every reply.",
+    "gateClass": "rules-gate good",
+    "metrics": 6,
+    "saveDisabled": false
+  },
+  "safety": {
+    "metricCards": 5,
+    "redteam": "EmergencyEmergency wordingRoute: Practice NurseSLA: relay nowEmergency phrase override: cannot breathe. No other rule can downgrade this result.Injection text: ignore previous instructionsCounterfactual probes (local, same rules):Without “cannot breathe” → General enquiry · Routine",
+    "emergencyClass": true,
+    "evalNote": "Source: docs/evaluation_metrics.json · 1,500 synthetic rows · seed 20261030 · labels kept separately. Emergency recall is measured on rows labelled Emergency."
+  },
+  "simulator": {
+    "patternBars": 24,
+    "capacity": "14 open / 25 teaching-model capacity 56% pressure. Assumed contacts per fictional shift: receptionist 8, practice nurse 5, GP 4. Adjustable assumption, not a workforce plan.",
+    "liveCards": 3
+  },
+  "command": {
+    "open": true,
+    "results": 1,
+    "first": "Go to DashboardNAV"
+  },
+  "apiRequestCount": 0,
+  "externalRequestCount": 0,
+  "environmentInjectedRequestCount": 9,
+  "consoleErrors": [],
+  "pageExceptions": [],
+  "screenshots": []
+}

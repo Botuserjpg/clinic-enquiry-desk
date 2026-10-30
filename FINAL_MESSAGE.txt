@@ -7,11 +7,14 @@ Branch: main
 Latest pushed commit at time of writing: 350eb8e
 Documentation commit for this file: see "Git status" below.
 
+ARCHIVE: This message describes an earlier project pass and its historical test
+results. It is superseded by README.md and docs/FINAL_AUDIT.md for current
+results.
+
 A local, explainable triage workspace for FICTIONAL general-practice clinic
 enquiries. Emergency wording always wins and tells staff to relay 000. A human
 approves every reply, and approval never sends anything. This is a
-demonstration, not a medical device, and it must not be used with real patient
-information.
+synthetic demonstration and it must not be used with real patient information.
 
 
 1. WHAT CHANGED
@@ -136,8 +139,7 @@ completed)
 
 Interpretation
 - These are fixture-level rule-consistency and UI checks. They are not
-  sensitivity, specificity, clinical validation, regulatory approval, or
-  evidence of real-world safety.
+  clinical performance or evidence of real-world safety.
 
 
 3. SKIPPED / TODOs (OWNER)

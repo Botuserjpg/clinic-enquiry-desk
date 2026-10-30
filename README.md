@@ -5,9 +5,9 @@ A local, explainable triage workspace for **fictional** general-practice clinic 
 **Repository:** <https://github.com/Botuserjpg/clinic-enquiry-desk>  
 **Live static demo:** <https://botuserjpg.github.io/clinic-enquiry-desk/>
 
-> Demonstration only. This is **not** a medical device, does not diagnose, does not give medical advice, and must not be used with real patient information. If there is immediate danger, call **000**.
+> Synthetic demonstration only. It does not diagnose or give medical advice. Never enter real patient information. If there is immediate danger, call **000**.
 
-![Clinic Mission Control hero](docs/screenshots/01-hero-static.png)
+![Clinic Mission Control inbox and hero](docs/screenshots/01-inbox.png)
 
 ## Try it in 60 seconds
 
@@ -22,34 +22,45 @@ A local, explainable triage workspace for **fictional** general-practice clinic 
 
 The page is designed to be useful in the first 10 seconds: product identity, live mode/clock/queue status, a safety notice, the auto-demo button and the intake form are all above the fold on a normal laptop.
 
-## What changed in the Wow round
+## Features
 
 - A distinctive mission-control visual system: dark navy, teal, amber and red tokens, a light theme, tabular numerals, inline SVG icons and reduced-motion handling. No CDN, external font, framework or build step.
 - A **Decision Pipeline** that animates the real classifier evidence: emergency scan, category match, priority, route/SLA and the human approval gate. It has replay and step-through controls.
 - A pinned emergency experience: full-width **CALL 000 NOW**, matched phrases, helpline lines, optional browser read-aloud on a user gesture, and a staff acknowledgement gate before the reply unlocks.
 - A mission-control dashboard with a live simulation, arrival timeline, role swimlanes, SLA breach counter, hourly heatmap, priority donut, backlog ageing, SLA gauge, median time-to-first-approval, and a clearly labelled manual-vs-assisted assumption slider. Every number is computed from the local event log unless labelled as an assumption.
 - A command palette (`Ctrl+K` / `/`), optional voice input (feature-detected, hidden when unavailable), and a skippable 60-second auto-demo.
+- A Trust Center with user-triggered local self-tests for emergency precedence, recall gate, routing configuration, slot exclusion, privacy masking and the hash primitive; it links the hazard log and a reviewer’s five-minute path.
+- A safety-gated Rules Lab that scores all 1,500 synthetic enquiries in the browser against labels kept in a separate array; the deterministic classifier itself receives no labels.
+- An advisory exact-text duplicate warning that points staff to the earlier record without changing triage priority or emergency handling.
 - A visual hash chain with **Verify integrity** and a display-only tamper simulation.
 - A PWA manifest and static-only service worker, plus printable **Shift handover**, **Prompt lab**, **Safety case** and **Limits** pages.
 - Honest documentation: build log, prompt provenance, safety case, limits, screenshots and a submission email draft.
 
 ## Screenshots
 
-| Decision Pipeline | Emergency gate |
+| Inbox and hero | Decision Pipeline |
 | --- | --- |
-| ![Decision pipeline](docs/screenshots/02-decision-pipeline.png) | ![Emergency panel](docs/screenshots/03-emergency.png) |
+| ![Inbox and hero](docs/screenshots/01-inbox.png) | ![Decision pipeline](docs/screenshots/02-decision-pipeline.png) |
 
-| Dashboard | Printable handover |
+| Emergency gate | Dashboard |
 | --- | --- |
-| ![Mission-control dashboard](docs/screenshots/04-dashboard.png) | ![Shift handover](docs/screenshots/05-handover.png) |
+| ![Emergency gate](docs/screenshots/03-emergency-gate.png) | ![Mission-control dashboard](docs/screenshots/04-dashboard.png) |
 
-Prompt provenance is shown in the [Prompt lab screenshot](docs/screenshots/06-prompt-lab.png). Screenshots were captured with headless Chrome from the local static build.
+| Queue | Rules Lab |
+| --- | --- |
+| ![Queue](docs/screenshots/05-queue.png) | ![Rules Lab full-set gate](docs/screenshots/06-rules-lab.png) |
+
+| Trust Center | Simulator |
+| --- | --- |
+| ![Trust Center self-tests](docs/screenshots/07-safety-net.png) | ![Clinic-day simulator](docs/screenshots/08-simulator.png) |
+
+These eight real screenshots were captured with headless Edge from the final static build. The Trust Center screenshot shows the actual in-browser PASS results.
 
 ## Two modes, one codebase
 
 The same `index.html`, `classifier.js`, `rules.js`, `app.js` and `mission.js` support both modes.
 
-| Mode | How it is selected | History storage | Network behavior |
+| Mode | How it is selected | History storage | Network behaviour |
 | --- | --- | --- | --- |
 | **Static demo** | Open `index.html` directly, serve it with a static file server, or host on GitHub Pages | Browser `localStorage` (falls back to memory if storage is blocked) | No application network calls. Zero `/api/` requests. |
 | **Server demo** | `npm start`, then open the local URL | `data/events.jsonl` on this machine | Same-origin calls to the local Node API |
@@ -90,24 +101,20 @@ The root `index.html`, `.nojekyll`, relative asset paths and static-mode fallbac
 
 ## How this maps to the assessment criteria
 
-| Assessment criterion | Where to look |
-| --- | --- |
-| AI tools used and why | [AI_USAGE.md](AI_USAGE.md), [VIDEO_SCRIPT.md](VIDEO_SCRIPT.md) (owner placeholders for personal tool choices) |
-| Prompt engineering and significant revisions | [PROMPTS.md](PROMPTS.md), [prompt_history/03_wow_prompt.md](prompt_history/03_wow_prompt.md), [Prompt lab](prompt-lab.html) |
-| Approach and prior knowledge | This README, [Architecture](docs/architecture.md), [Assumptions](docs/assumptions.md), [Handoff state](HANDOFF_STATE.md) |
-| Challenges and fixes | [BUILD_LOG.md](BUILD_LOG.md) under **Wow round**, including the manifest CORS fix and the live-probe race |
-| Working demo | [Live site](https://botuserjpg.github.io/clinic-enquiry-desk/), auto-demo, screenshots above, [VIDEO_SCRIPT.md](VIDEO_SCRIPT.md) |
-| Public repository and live site | Repository and Pages links at the top of this file |
-| Static/offline friendliness | Static mode works from `file://`, a repo root, a subpath and GitHub Pages; no CDN or build step |
-| Safety and human-in-the-loop | Emergency override, acknowledgement gate, approval gate, [Safety case](safety.html), [Limits](limits.html), [Safety notes](docs/safety_notes.md) |
-| Accessibility | Skip link, visible focus, semantic landmarks, command palette, keyboard controls, light/dark theme, `prefers-reduced-motion` |
-| Honest data and metrics | Counts come from the local event log; the time-saving slider is explicitly labelled as an assumption; evaluation is labelled as fixture-only |
-| Tests and verification | Numbers and commands below; full results in [FINAL_MESSAGE.txt](FINAL_MESSAGE.txt) |
+| Assessment criterion | Where to look | Evidence |
+| --- | --- | --- |
+| Practical AI use | [AI_USAGE.md](AI_USAGE.md) and runtime classifier | Runtime uses explicit deterministic rules; AI-assisted implementation and verification are documented, with owner reflection left for the owner. |
+| Prompt engineering and iteration | [PROMPTS.md](PROMPTS.md), [prompt_history/](prompt_history/), [Prompt Lab](prompt-lab.html) | Existing prompt provenance is retained; missing originals remain marked for the owner rather than reconstructed. |
+| Approach and prior knowledge | [Architecture](docs/architecture.md), [Assumptions](docs/assumptions.md) | Rule order, browser/server split, data flow and synthetic assumptions are described. |
+| Challenges and fixes | [BUILD_LOG.md](BUILD_LOG.md), especially **Wow round**, **Upgrade round**, and **Final round** | Records actual defects and remedies, including the manifest CORS issue and Chrome DevTools timeout. |
+| Creativity and usefulness | Auto-demo, Decision Pipeline, simulator, Rules Lab, FAQ and Trust Center | Controls are linked to real local rules, evaluation artifacts and synthetic operational data. |
+| Explainability and safety | [Safety case](safety.html), [Limits](limits.html), [Hazard log](docs/safety_hazard_log.md) | Matched phrases, routing, recall gate, human approval, advisory duplicates and emergency precedence are visible. |
+| Technical execution | [CI workflow](.github/workflows/ci.yml), tests, browser reports | Node and Python checks, API permission tests, reproducibility tests and saved static-mode browser reports. |
 
 ## Shared rules and synthetic data
 
 - `rules.json` is the single authored rule source for JavaScript and Python. It contains red flags, categories, prompt-review words, reply drafts, role routing, and service-level targets.
-- `rules.js` and `config/clinic.js` are generated browser bundles. Regenerate them after editing the JSON sources:
+- `rules.js`, `config/clinic.js`, `data/evaluation_fixtures.js` and `docs/evaluation_metrics.js` are generated browser bundles. Regenerate them after editing their source JSON files:
 
 ```sh
 python tools/build_browser_rules.py
@@ -115,6 +122,7 @@ python tools/build_browser_rules.py
 
 - `data/enquiries.json` contains fictional messages only.
 - `data/labels.json` contains the expected labels in a **separate** file.
+- `data/eval_enquiries.json` and `data/eval_labels.json` contain the seeded 1,500-row evaluation set. The generated browser bundle keeps these as separate arrays and is consumed only by the Rules Lab evaluation code.
 - `config/clinic.json` contains a fictional clinic name, opening hours, public holidays, and a synthetic staff roster.
 - `data/generated_enquiries.json` is generator output and is git-ignored.
 - Runtime history is local: browser `localStorage` in static mode, `data/events.jsonl` in server mode. Both are git-ignored.
@@ -136,15 +144,17 @@ Run both test suites:
 ```sh
 npm test
 python -m unittest discover -s tests -v
+python -m pytest -q
 ```
 
-Current results (recorded from real runs in this working session):
+Current results (recorded from real runs in the final working session):
 
-- `node --check` on every JavaScript file: **all passed** (10 files, including `app.js`, `mission.js`, `theme.js`, `handover.js`, `server.js` and `sw.js`).
-- `npm test`: **6/6 passed**.
-- `python -m unittest discover -s tests -v`: **12/12 passed**.
-- `python tools/evaluate.py`: **12/12** category, priority and red-flag matches; **4/4 (100%)** emergency recall on the synthetic fixture.
-- Headless Chrome checks: static mode at the HTTP root, a **subpath**, and **`file://`** all worked; **zero `/api/` requests** in static mode; no page exceptions or console errors after the manifest fix. Server mode worked with the injected marker and made local `/api/` calls.
+- `node --check` on every project JavaScript file: **all passed**.
+- `npm test`: **19/19 passed**.
+- `python -m unittest discover -s tests -v`: **22/22 passed**.
+- `python -m pytest -q`: **22 passed, 12 subtests passed**.
+- Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
+- Final headless Edge checks on a fresh temporary copy passed static root, GitHub-style subpath, `file://`, and server mode. Static modes recorded **zero `/api/` calls** and all modes had **zero unexpected external requests, console errors or page exceptions**. All seven Trust Center checks passed; the Rules Lab displayed its full 1,500-row result.
 - These are rule-consistency results on fictional examples, **not** clinical validation or evidence of real-world safety.
 
 ## Documentation
@@ -160,7 +170,7 @@ Current results (recorded from real runs in this working session):
 
 ## Safety and limitations
 
-Use only fictional examples. Never enter real patient, health, or personal information. The prototype has no authentication, access control, transport security configuration, clinical validation, or regulatory approval. Phrase matching is literal: it can miss emergencies and can flag ordinary or negated text. Staff judgement and the 000 instruction always take priority. The hash chain can expose some edits but is not a security boundary. Read the full [Safety case](safety.html) and [Limits](limits.html).
+Use only fictional examples. Never enter real patient, health, or personal information. The prototype has no authentication or access controls and has not been clinically validated. Phrase matching is literal: it can miss emergencies and can flag ordinary or negated text. Staff judgement and the 000 instruction always take priority. The hash chain can expose some edits but is not a security boundary. Read the full [Safety case](safety.html) and [Limits](limits.html).
 
 ## Not done yet (owner TODOs)
 
@@ -173,7 +183,10 @@ These are intentionally left for the project owner and are not fabricated here:
 - Open the live URL in an incognito window and run the auto-demo once.
 - Email `jobs@gokulinfocare.com` with the repository and live demo links.
 - Optionally re-deploy Pages after the final documentation commit.
+- GitHub Actions has not yet run on a push of this final-round tree.
 
-## License
+Other current limits: exact duplicate detection is advisory; it does not merge records. Clinical validation, authentication and real message delivery are out of scope.
+
+## Licence
 
 MIT. See [LICENSE](LICENSE).

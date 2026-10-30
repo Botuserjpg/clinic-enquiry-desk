@@ -1,22 +1,31 @@
 {
-  "version": 2,
+  "version": 3,
   "redFlags": [
     "chest pain",
+    "chest tightness",
     "can't breathe",
+    "cant breathe",
     "cannot breathe",
+    "can not breathe",
     "difficulty breathing",
     "shortness of breath",
     "short of breath",
     "unconscious",
+    "collapsed",
+    "not responding",
     "severe bleeding",
+    "heavy bleeding",
     "overdose",
-    "suicidal"
+    "suicidal",
+    "anaphylaxis",
+    "severe allergic reaction"
   ],
   "categories": [
-    { "name": "Appointments", "terms": ["appointment", "booking", "book", "reschedule", "cancel"] },
+    { "name": "Appointments", "terms": ["appointment", "booking", "book", "reschedule", "cancel", "appt"] },
     { "name": "Prescription refill", "terms": ["prescription", "repeat", "medication", "script", "refill"] },
     { "name": "Test results", "terms": ["test result", "results", "pathology", "blood test"] },
-    { "name": "Billing", "terms": ["bill", "billing", "invoice", "payment", "medicare"] }
+    { "name": "Billing", "terms": ["bill", "billing", "invoice", "payment", "medicare", "charged", "refund"] },
+    { "name": "Complaint / feedback", "terms": ["complaint", "complain", "feedback", "rude", "unhappy", "disappointed", "frustrated", "waited too long", "waiting too long", "poor service", "service was poor"] }
   ],
   "promptReviewWords": ["today", "asap", "urgent", "soon", "worsening"],
   "priorities": {
@@ -24,9 +33,25 @@
     "promptReview": "Prompt review",
     "routine": "Routine"
   },
+  "tone": {
+    "words": ["angry", "furious", "unacceptable", "disgusted", "appalling", "ridiculous", "fed up", "frustrated", "disappointed", "unhappy", "rude", "terrible", "worst", "complaint", "complain", "poor service"],
+    "angryAt": 3,
+    "frustratedAt": 1
+  },
+  "languages": [
+    { "name": "Spanish", "greetings": ["hola", "buenos dias", "buenas tardes", "gracias"] },
+    { "name": "Mandarin", "greetings": ["ni hao", "nihao", "xie xie"] },
+    { "name": "Vietnamese", "greetings": ["xin chao", "cam on"] },
+    { "name": "Arabic", "greetings": ["marhaba", "shukran", "as-salamu alaykum"] },
+    { "name": "Hindi", "greetings": ["namaste", "dhanyavaad"] },
+    { "name": "Turkish", "greetings": ["merhaba", "tesekkur"] }
+  ],
+  "injectionPhrases": ["ignore previous instructions", "ignore all previous", "system prompt", "you are now", "disregard the rules", "disregard previous", "jailbreak", "prompt injection", "reveal your instructions", "act as an administrator"],
+  "negationPatterns": ["no ", "not ", "without ", "denies ", "denied "],
   "replies": {
     "emergency": "Please call 000 now. Do not wait for a reply from the clinic. A staff member will follow up when appropriate.",
-    "routine": "Thanks for contacting the clinic. We have received your enquiry and a staff member will review it. We will be in touch during clinic hours."
+    "routine": "Thanks for contacting the clinic. We have received your enquiry and a staff member will review it. We will be in touch during clinic hours.",
+    "complaint": "Thank you for telling us about your experience. We are sorry this happened. A practice manager will review your feedback and contact you to discuss it."
   },
   "routing": {
     "Emergency": "Practice Nurse",
@@ -34,6 +59,7 @@
     "Prescription refill": "GP",
     "Test results": "Practice Nurse",
     "Billing": "Receptionist",
+    "Complaint / feedback": "Practice Manager",
     "General enquiry": "Receptionist"
   },
   "serviceLevels": {

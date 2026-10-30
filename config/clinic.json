@@ -24,5 +24,29 @@
     { "role": "Practice Nurse", "name": "Synthetic Nurse A" },
     { "role": "GP", "name": "Synthetic GP A" },
     { "role": "Practice Manager", "name": "Synthetic Manager A" }
-  ]
+  ],
+  "helplines": [
+    { "name": "Emergency", "number": "000", "comment": "Verify before real use. Life-threatening emergencies only." },
+    { "name": "Lifeline", "number": "13 11 14", "comment": "Verify before real use. Crisis support." },
+    { "name": "Healthdirect", "number": "1800 022 222", "comment": "Verify before real use. Nurse advice line." }
+  ],
+  "interpreterService": {
+    "name": "Translating and Interpreting Service (TIS National)",
+    "number": "131 450",
+    "comment": "Verify before real use. Do not auto-translate clinical content."
+  },
+  "appointments": {
+    "slotMinutes": 30,
+    "daysAhead": 7,
+    "roles": ["GP", "Practice Nurse"],
+    "preBooked": [
+      { "dayOffset": 1, "time": "09:00", "role": "GP" },
+      { "dayOffset": 1, "time": "11:30", "role": "Practice Nurse" },
+      { "dayOffset": 2, "time": "10:00", "role": "GP" },
+      { "dayOffset": 3, "time": "14:00", "role": "GP" }
+    ],
+    "comment": "Synthetic calendar only. Verify before real use."
+  },
+  "faqMatchThreshold": 1.2,
+  "notificationsDefault": false
 }

@@ -3,10 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const rules = require('./rules.json');
+const extras = require('./extras');
 const { classify, routeEnquiry, maskSensitive } = require('./classifier');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 3000);
+const MAX_BODY_BYTES = 20000;
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -18,7 +20,24 @@ const mimeTypes = {
   '.ico': 'image/x-icon',
 };
 const dataDirectory = path.join(root, 'data');
-const eventFile = path.join(dataDirectory, 'events.jsonl');
+const eventFile = process.env.CLINIC_EVENT_FILE
+  ? path.resolve(process.env.CLINIC_EVENT_FILE)
+  : path.join(dataDirectory, 'events.jsonl');
+const eventDirectory = path.dirname(eventFile);
+
+// Same fictional matrix as the browser. The server is the enforcement point in
+// server mode; the browser copy only produces a friendlier message.
+const APPROVAL_ROLES = {
+  Emergency: ['Practice Nurse', 'GP', 'Practice Manager'],
+  'Prescription refill': ['GP'],
+  'Test results': ['Practice Nurse', 'GP'],
+  'Complaint / feedback': ['Practice Manager'],
+  Billing: ['Receptionist', 'Practice Manager'],
+  Appointments: ['Receptionist', 'Practice Manager'],
+  'General enquiry': ['Receptionist', 'Practice Manager'],
+};
+const STAFF_ROLES = ['Receptionist', 'Practice Nurse', 'GP', 'Practice Manager'];
+const STATUSES = ['open', 'done', 'snoozed'];
 
 function readEvents() {
   try {
@@ -30,7 +49,7 @@ function readEvents() {
 }
 
 function appendEvent(event) {
-  fs.mkdirSync(dataDirectory, { recursive: true });
+  fs.mkdirSync(eventDirectory, { recursive: true });
   const events = readEvents();
   const previousHash = events.at(-1)?.hash || 'GENESIS';
   const content = { ...event, previousHash, timestamp: new Date().toISOString() };
@@ -39,23 +58,66 @@ function appendEvent(event) {
   return { ...content, hash };
 }
 
+function securityHeaders(contentType) {
+  return {
+    'Content-Type': contentType,
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "object-src 'none'",
+      "base-uri 'none'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  };
+}
+
 function sendJson(response, status, body) {
-  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  response.writeHead(status, securityHeaders('application/json; charset=utf-8'));
   response.end(JSON.stringify(body));
 }
 
 function readJson(request) {
   return new Promise((resolve, reject) => {
+    const declared = Number(request.headers['content-length'] || 0);
+    if (declared > MAX_BODY_BYTES) {
+      reject(new Error('Request is too large.'));
+      return;
+    }
     let body = '';
+    let settled = false;
     request.on('data', chunk => {
+      if (settled) return;
       body += chunk;
-      if (body.length > 20000) reject(new Error('Request is too large.'));
+      if (Buffer.byteLength(body, 'utf8') > MAX_BODY_BYTES) {
+        settled = true;
+        reject(new Error('Request is too large.'));
+      }
     });
     request.on('end', () => {
-      try { resolve(JSON.parse(body)); } catch { reject(new Error('Please send valid JSON.')); }
+      if (settled) return;
+      try {
+        resolve(JSON.parse(body || '{}'));
+      } catch {
+        reject(new Error('Please send valid JSON.'));
+      }
     });
     request.on('error', reject);
   });
+}
+
+function findEnquiry(events, id) {
+  return events.find(event => event.id === id && event.type === 'enquiry_received');
 }
 
 function handleApi(request, response, pathname) {
@@ -63,6 +125,7 @@ function handleApi(request, response, pathname) {
     sendJson(response, 200, readEvents());
     return;
   }
+
   if (request.method === 'POST' && pathname === '/api/enquiries') {
     readJson(request).then(({ message }) => {
       if (typeof message !== 'string' || !message.trim() || message.length > 2000) {
@@ -84,6 +147,7 @@ function handleApi(request, response, pathname) {
     }).catch(error => sendJson(response, 400, { error: error.message }));
     return;
   }
+
   const acknowledgement = pathname.match(/^\/api\/enquiries\/([\w-]+)\/acknowledge$/);
   if (request.method === 'POST' && acknowledgement) {
     readJson(request).then(({ acknowledgedBy }) => {
@@ -92,7 +156,7 @@ function handleApi(request, response, pathname) {
         return;
       }
       const events = readEvents();
-      const enquiry = events.find(event => event.id === acknowledgement[1] && event.type === 'enquiry_received');
+      const enquiry = findEnquiry(events, acknowledgement[1]);
       if (!enquiry) { sendJson(response, 404, { error: 'Enquiry not found.' }); return; }
       if (!enquiry.emergency) { sendJson(response, 400, { error: 'Only an emergency phrase match needs this acknowledgement.' }); return; }
       if (events.some(event => event.type === 'emergency_acknowledged' && event.id === acknowledgement[1])) {
@@ -104,52 +168,147 @@ function handleApi(request, response, pathname) {
     }).catch(error => sendJson(response, 400, { error: error.message }));
     return;
   }
-  const approval = pathname.match(/^\/api\/enquiries\/([\w-]+)\/approve$/);
-  if (request.method === 'POST' && approval) {
-    readJson(request).then(({ approvedBy }) => {
-      if (typeof approvedBy !== 'string' || !approvedBy.trim() || approvedBy.length > 60) {
-        sendJson(response, 400, { error: 'Enter a staff name or initials (up to 60 characters).' });
+
+  const statusRoute = pathname.match(/^\/api\/enquiries\/([\w-]+)\/status$/);
+  if (request.method === 'POST' && statusRoute) {
+    readJson(request).then(({ status, staffRole }) => {
+      if (!STATUSES.includes(status)) {
+        sendJson(response, 400, { error: 'Status must be open, done or snoozed.' });
+        return;
+      }
+      if (staffRole !== undefined && !STAFF_ROLES.includes(staffRole)) {
+        sendJson(response, 400, { error: 'Unknown staff role.' });
         return;
       }
       const events = readEvents();
-      const enquiry = events.find(event => event.id === approval[1] && event.type === 'enquiry_received');
-      if (!enquiry) { sendJson(response, 404, { error: 'Enquiry not found.' }); return; }
-      if (events.some(event => event.type === 'reply_approved' && event.id === approval[1])) {
-        sendJson(response, 409, { error: 'This reply is already approved.' });
+      if (!findEnquiry(events, statusRoute[1])) {
+        sendJson(response, 404, { error: 'Enquiry not found.' });
         return;
       }
-      const event = appendEvent({ type: 'reply_approved', id: approval[1], approvedBy: approvedBy.trim() });
+      const event = appendEvent({ type: 'status_changed', id: statusRoute[1], status, changedBy: staffRole || 'Receptionist' });
       sendJson(response, 201, event);
     }).catch(error => sendJson(response, 400, { error: error.message }));
     return;
   }
+
+  const approval = pathname.match(/^\/api\/enquiries\/([\w-]+)\/approve$/);
+  if (request.method === 'POST' && approval) {
+    readJson(request).then(payload => {
+      const { approvedBy, staffRole = 'Receptionist', replyText = '', tone = 'warm', channel = 'email', faqId = null, slotId = null } = payload;
+      if (typeof approvedBy !== 'string' || !approvedBy.trim() || approvedBy.length > 60) {
+        sendJson(response, 400, { error: 'Enter a staff name or initials (up to 60 characters).' });
+        return;
+      }
+      if (!STAFF_ROLES.includes(staffRole)) {
+        sendJson(response, 400, { error: 'Unknown staff role.' });
+        return;
+      }
+      if (typeof replyText !== 'string' || replyText.length > 4000) {
+        sendJson(response, 400, { error: 'Reply text must be 4,000 characters or fewer.' });
+        return;
+      }
+      if (!['warm', 'formal', 'brief'].includes(tone) || !['email', 'sms'].includes(channel)) {
+        sendJson(response, 400, { error: 'Unknown tone or channel.' });
+        return;
+      }
+      if (channel === 'sms' && replyText.length > 320) {
+        sendJson(response, 400, { error: 'The SMS draft is over 320 characters.' });
+        return;
+      }
+      if (extras.medicalAdviceHits(replyText).length) {
+        sendJson(response, 400, { error: 'Approval blocked: the draft contains medical-advice wording.' });
+        return;
+      }
+      const events = readEvents();
+      const enquiry = findEnquiry(events, approval[1]);
+      if (!enquiry) { sendJson(response, 404, { error: 'Enquiry not found.' }); return; }
+      const allowed = APPROVAL_ROLES[enquiry.category] || ['Receptionist'];
+      if (!allowed.includes(staffRole)) {
+        sendJson(response, 403, { error: `${staffRole} cannot approve a ${enquiry.category} reply in this demo.` });
+        return;
+      }
+      if (enquiry.emergency && !events.some(event => event.type === 'emergency_acknowledged' && event.id === approval[1])) {
+        sendJson(response, 409, { error: 'Acknowledge the 000 instruction before approving the emergency reply.' });
+        return;
+      }
+      if (events.some(event => event.type === 'reply_approved' && event.id === approval[1])) {
+        sendJson(response, 409, { error: 'This reply is already approved.' });
+        return;
+      }
+      if (slotId !== null && (typeof slotId !== 'string' || slotId.length > 120)) {
+        sendJson(response, 400, { error: 'Unknown appointment slot.' });
+        return;
+      }
+      if (slotId && events.some(event => event.type === 'appointment_booked' && event.slotId === slotId)) {
+        sendJson(response, 409, { error: 'That slot is already booked. Choose another slot or handle it manually.' });
+        return;
+      }
+      const event = appendEvent({
+        type: 'reply_approved',
+        id: approval[1],
+        approvedBy: approvedBy.trim(),
+        staffRole,
+        replyText: maskSensitive(replyText),
+        tone,
+        channel,
+        faqId,
+        slotId,
+      });
+      if (slotId) {
+        appendEvent({ type: 'appointment_booked', id: approval[1], slotId, bookedBy: approvedBy.trim() });
+      }
+      sendJson(response, 201, event);
+    }).catch(error => sendJson(response, 400, { error: error.message }));
+    return;
+  }
+
   sendJson(response, 404, { error: 'Not found.' });
+}
+
+function resolveStaticFile(pathname) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+  const requested = decoded === '/' ? '/index.html' : decoded;
+  const filePath = path.resolve(root, `.${requested}`);
+  if (filePath !== root && !filePath.startsWith(root + path.sep)) return null;
+  const relative = path.relative(root, filePath);
+  if (relative.split(path.sep).some(part => part.startsWith('.') && part !== '.well-known')) return null;
+  return filePath;
 }
 
 const server = http.createServer((request, response) => {
   const pathname = new URL(request.url, `http://${request.headers.host || 'localhost'}`).pathname;
   if (pathname.startsWith('/api/')) return handleApi(request, response, pathname);
-  const requested = pathname === '/' ? '/index.html' : pathname;
-  const filePath = path.join(root, requested);
-  if (!filePath.startsWith(root + path.sep)) {
-    response.writeHead(403).end('Forbidden');
+  if (pathname === '/server-mode.js') {
+    response.writeHead(200, securityHeaders('text/javascript; charset=utf-8'));
+    response.end('window.CLINIC_SERVER_MODE = true;\n');
+    return;
+  }
+  const filePath = resolveStaticFile(pathname);
+  if (!filePath) {
+    response.writeHead(403, securityHeaders('text/plain; charset=utf-8')).end('Forbidden');
     return;
   }
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
+      response.writeHead(404, securityHeaders('text/plain; charset=utf-8')).end('Not found');
       return;
     }
     // The marker tells the shared browser code to use the Node API instead of static storage.
     const body = path.extname(filePath) === '.html'
-      ? content.toString('utf8').replace('</head>', '<script>window.CLINIC_SERVER_MODE=true;</script></head>')
+      ? content.toString('utf8').replace('</head>', '<script src="/server-mode.js"></script></head>')
       : content;
-    response.writeHead(200, {
-      'Content-Type': mimeTypes[path.extname(filePath)] || 'application/octet-stream',
-      'Cache-Control': 'no-store',
-    });
+    response.writeHead(200, securityHeaders(mimeTypes[path.extname(filePath)] || 'application/octet-stream'));
     response.end(body);
   });
 });
 
-server.listen(port, '127.0.0.1', () => console.log(`Clinic Enquiry Desk running at http://localhost:${port}`));
+if (require.main === module) {
+  server.listen(port, '127.0.0.1', () => console.log(`Clinic Enquiry Desk running at http://localhost:${port}`));
+}
+
+module.exports = { server, APPROVAL_ROLES, STAFF_ROLES, STATUSES, readEvents, appendEvent, resolveStaticFile };

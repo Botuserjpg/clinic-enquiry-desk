@@ -1,6 +1,6 @@
 # Assumptions
 
-- This is a local, single-user demonstration prototype, not a production clinical system or medical device.
+- This is a local, single-user demonstration prototype and is not intended for clinical operations.
 - All fixtures, labels, clinic details, staff names and messages are fictional. No real patient or personal data is used.
 - Emergency escalation displays a direct instruction to call 000 and identifies matched phrases. The demo has no sender messaging integration.
 - The rules are deterministic and illustrative. They do not diagnose, assess clinical urgency, or provide medical advice.
@@ -13,3 +13,4 @@
 - The Node server injects a server-mode marker into the page. Without that marker, the page uses static mode. A query parameter can force either mode for testing.
 - No runtime AI service is used. AI assisted the implementation; runtime decisions are transparent rule matches.
 - Evaluation figures describe agreement with synthetic labels only. They are not clinical validation, accuracy claims, or evidence of real-world safety.
+- Duplicate detection is exact normalised text matching over stored, masked enquiry text. It is only a review cue; it is not identity resolution and does not merge records or change emergency precedence.

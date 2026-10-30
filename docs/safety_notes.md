@@ -1,12 +1,14 @@
 # Safety notes
 
-This public demo is not a medical device. It never provides diagnosis or medical advice. Do not enter real patient, health, or personal information. Use only the synthetic examples.
+This public demo uses synthetic enquiries only. It does not diagnose or provide medical advice. Do not enter real patient, health, or personal information.
 
 ## Emergency handling
 
 The classifier checks red-flag phrases before category and urgency rules. A red-flag match overrides every other rule, raises Emergency wording, and displays “call 000 now” plus the matching phrase. The prototype cannot contact the sender; staff must relay the instruction immediately. Phrase matching can miss emergencies and can flag ordinary text, so it must not be used to assess safety or clinical urgency.
 
 Every reply requires a staff approval action. Approval is an audit event and does not send a message.
+
+Exact duplicate-text detection is an advisory comparison of stored masked messages. It points to an earlier record but does not merge, suppress, reprioritise or downgrade an enquiry. Emergency wording still takes precedence.
 
 ## Network behavior
 
@@ -26,7 +28,7 @@ The only match is the `fetch` inside the guarded `request()` helper in `app.js`.
 
 ## Storage and limitations
 
-Server mode writes the local event file; static mode writes the browser's localStorage. Static storage can be cleared or be unavailable, in which case the demo keeps events in memory for the current page. The hash chain can expose some sequence edits when independently checked, but it is not a security boundary. The app has no authentication, access controls, transport security configuration, clinical validation, or regulatory approval.
+Server mode writes the local event file; static mode writes the browser's localStorage. Static storage can be cleared or be unavailable, in which case the demo keeps events in memory for the current page. The hash chain can expose some sequence edits when independently checked, but it is not a security boundary. The app has no authentication or access controls and has not been clinically validated.
 
 ## Masking and simulation
 
@@ -35,3 +37,5 @@ Structured-identifier masking is applied before display and storage for common p
 ## Integrity checking
 
 The **Verify integrity** button recomputes the local hash chain and reports the first mismatch. Server mode uses SHA-256. Static mode uses Web Crypto SHA-256 where available and a labelled deterministic fallback otherwise. Passing the check means the stored sequence is internally consistent; it does not prove that no one with storage access changed the data.
+
+The Safety view includes a user-triggered Trust Center. Its in-browser checks exercise classifier precedence, measured fixture recall, configured routing, synthetic slot exclusion, masking and hash-change behaviour. The API permission test runs in Node against the server. A PASS only describes that software check on the supplied synthetic cases.

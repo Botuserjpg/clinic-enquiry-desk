@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
-  <meta name="description" content="Prompt provenance for Clinic Mission Control. Only saved prompts are listed; missing originals are marked TODO.">
+  <meta name="description" content="Prompt provenance for Clinic Mission Control. Only saved prompts are listed; summaries are not presented as verbatim originals.">
   <link rel="icon" href="icons/clinic-icon.svg" type="image/svg+xml">
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
@@ -46,7 +46,7 @@
     <section class="doc-hero">
       <p class="eyebrow"><svg class="icon"><use href="#i-spark"></use></svg> PROMPT LAB · HONEST PROVENANCE</p>
       <h1>Prompts that shaped the build</h1>
-      <p>This page lists the prompt files that actually exist in this repository. Missing originals are marked <strong>TODO (owner)</strong>. No prompts, dates or outcomes are invented.</p>
+      <p>This page lists the prompt files that are saved in this repository. Some original prompts are unavailable here; the summaries are not verbatim records. No prompts, dates or outcomes are invented.</p>
     </section>
 
     <div class="doc-grid">
@@ -60,12 +60,12 @@
         <div class="prompt-entry">
           <h3>02 · Upgrade round prompt</h3>
           <p><strong>Purpose:</strong> Add shared rules, browser/Python parity, static mode, synthetic fixtures, Python tools and documentation.</p>
-          <p class="todo">TODO (owner): the original prompt text was not saved as a file. A summary exists in <a href="PROMPTS.md">PROMPTS.md</a>; do not treat the summary as a verbatim prompt.</p>
+          <p class="todo">The original prompt text is not saved as a file. A summary exists in <a href="PROMPTS.md">PROMPTS.md</a>; do not treat the summary as a verbatim prompt.</p>
         </div>
         <div class="prompt-entry">
           <h3>01 · Initial project brief</h3>
           <p><strong>Purpose:</strong> Build the original small clinic enquiry triage prototype.</p>
-          <p class="todo">TODO (owner): the original brief is not present in <code>prompt_history/</code>. Add it if you want a complete audit trail.</p>
+          <p class="todo">The original brief is not present in <code>prompt_history/</code>. Add the exact original if you want a complete audit trail.</p>
         </div>
       </section>
 
@@ -85,7 +85,7 @@
           <li>No secrets, credentials or real patient data are stored in prompt files.</li>
           <li>Runtime triage uses deterministic rules; no model API is called by the app.</li>
           <li>AI assistance is documented honestly in <a href="AI_USAGE.md">AI_USAGE.md</a>.</li>
-          <li>Reflections and the owner’s own prompt history remain owner TODOs.</li>
+          <li>Personal reflections and any missing original prompt records are for the project owner to supply.</li>
         </ul>
       </section>
 

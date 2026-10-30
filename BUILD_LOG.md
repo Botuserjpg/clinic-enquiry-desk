@@ -2,12 +2,47 @@
 
 Factual record of problems encountered and their fixes.
 
+## Final round
+
+- The final checklist comparison found two unfinished items: duplicate detection was absent, and the Rules Lab was still scoring only the old 12-row sample. Added a cautious exact-text duplicate alert (review only; it changes no category, priority or emergency outcome) and switched Rules Lab to all 1,500 seeded enquiries with labels kept in a separate generated browser array. The classifier API still accepts messages and rules only.
+- The first final-round headless pass exposed two browser-check harness defects: the CDP response handler was registered after send, risking a lost fast response, and resolved calls left 30-second timeout timers alive. Registered handlers before send and clear their timers on response. The first full browser retry also caught and fixed a mislabeled phone-mask self-test fixture.
+- Refreshed README and submission-email evaluation figures from the generated report, added an assessment evidence table, and documented the Trust Center, full-set Rules Lab and duplicate warning.
+
+### Final round verification
+
+- On a fresh temporary copy, `node --check` passed for **21 JavaScript/ES module files**; `npm test` passed **19/19**; `python -m pytest -q` passed **22 tests and 12 subtests**; the stdlib `unittest` command passed **22/22**.
+- Evaluation on 1,500 synthetic enquiries (seed `20261030`): exact category+priority **91.87%** (95% bootstrap CI 90.4–93.2%), emergency recall **232/232 (100%)**, **50** false positives, **40.8%** human-review rate. SHA-256 is recorded in the generated report. The separate Node benchmark classified all 1,500 in **42.98 ms** on this machine.
+- Reproducibility: seed `20261030` generated the same enquiry SHA-256 twice (`50da75f7…fd5ca6`) and the same labels SHA-256 twice (`1820bf1e…2c86d`); seed `42` produced different hashes for both files. The Python test now asserts the different-seed case.
+- Headless Edge E2E on the fresh copy passed `file://`, static root, GitHub-style subpath and server mode. Each mode reported zero unexpected external requests, console errors and page exceptions; static modes reported zero `/api/` requests; server mode made 19 same-origin API calls. All seven Trust Center self-tests passed, as did the 1,500-row Rules Lab, keyboard focus/close and reduced-motion smoke checks.
+- Captured eight final screenshots in `docs/screenshots/` and saved per-mode browser reports in `docs/browser_check_final_*.json`. The file-mode report uses a redacted placeholder URL, not a local path.
+- GitHub Actions has not run on a final-round push. The owner must push to observe the hosted workflow and verify the public Pages URL in incognito.
+
+## Round 2
+
+- Initial checks: `npm test` passed 17/17. Initial `pytest` ran 21 tests plus 12 subtests and exposed a missing `.github/workflows/ci.yml` (and the suite's expected `Dockerfile`). Added a zero-dependency Node container recipe and CI workflow covering JS syntax, npm tests, Python tests and evaluation.
+- Initial audit found Safety lacked the requested reviewer-facing Trust Center and live self-tests. Added a local Run self-tests panel with emergency/negation classification, measured emergency recall, configured GP refill routing, synthetic calendar slot exclusion, identifier masking and repeatable hash checks. Results use text nodes and explicit PASS/FAIL labels; results are not pre-populated.
+- Added a direct Trust Center path to `WHATS_NEW.md` and described the feature in README. Follow-up verification is recorded below when complete.
+
+### Round 2 verification
+
+- `node --check` passed for every JavaScript file outside `node_modules`.
+- `npm test`: **17/17 passed**. `python -m pytest -q`: **21 passed, 12 subtests passed**.
+- `python tools/evaluate.py --report docs/evaluation_report.md`: **1,500 rows**, exact category+priority accuracy **91.87%**, emergency recall **232/232 (100%)**, emergency false positives **50**. CI intervals and subgroup metrics are in the generated report/JSON.
+- The added browser rerun could not initialize the installed Chrome DevTools target and timed out at `Runtime.enable`; therefore, Trust Center interaction is not claimed browser-verified. Existing saved static root/subpath/file and server reports document earlier runs before this panel was added.
+- Git status remains modified/untracked as it was before this continuation. Git writes were not retried because the project handoff records `.git/index.lock` permission denial. No commits were made.
+
 - The first HTTP check tried to start Node with PowerShell `Start-Process`; the sandbox rejected hidden background process creation. I ran the server in the command runner's foreground session and checked it from a separate request instead; the page returned HTTP 200.
 - Git initialized successfully, but `git add` could not create `.git/index.lock` because the environment exposes `.git` as read-only. The project files are writable, but phase commits cannot be created with the current filesystem permissions. This is an environment limitation without a workaround available inside the writable project folder.
 - The first JavaScript syntax check found an extra semicolon in the history label's ternary expression. I removed it; both scripts are being checked again before the feature walkthrough.
 - The initial visual design imported Google Fonts, which would make a local demonstration request an external resource. I removed the font import and kept system fallbacks so the prototype stays self-contained.
 
 ## Upgrade round
+
+### Round 2 continuation
+
+- Initial `npm test` passed 17/17. Initial `pytest` ran 21 tests plus 12 subtests and exposed a missing `.github/workflows/ci.yml` (and the suite's expected `Dockerfile`). Added a zero-dependency Node container recipe and CI workflow covering JS syntax, npm tests, Python tests and evaluation.
+- Initial audit found Safety lacked the requested reviewer-facing Trust Center and live self-tests. Added a local Run self-tests panel with emergency/negation classification, measured emergency recall, configured GP refill routing, synthetic calendar slot exclusion, identifier masking and repeatable hash checks. Results use text nodes and explicit PASS/FAIL labels; results are not pre-populated.
+- Added a direct Trust Center path to `WHATS_NEW.md` and described the feature in README.
 
 ### Phase 0 audit
 
@@ -65,3 +100,6 @@ Work window: 2026-10-30, approximately 15:40–16:20 (local environment time). F
 - The original prompts for rounds 01 and 02 were not present in the repository, so `PROMPTS.md` and `prompt-lab.html` mark them **TODO (owner)** rather than inventing them.
 
 
+
+### Final round — audit artefact cleanup
+- Replaced an old browser report's machine-specific file URL with a fresh-copy placeholder after the final local-path scan found it. Final scan is clean.
