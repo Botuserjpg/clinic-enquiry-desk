@@ -63,7 +63,7 @@ The same `index.html`, `classifier.js`, `rules.js`, `app.js` and `mission.js` su
 | Mode | How it is selected | History storage | Network behaviour |
 | --- | --- | --- | --- |
 | **Static demo** | Open `index.html` directly, serve it with a static file server, or host on GitHub Pages | Browser `localStorage` (falls back to memory if storage is blocked) | No application network calls. Zero `/api/` requests. |
-| **Server demo** | `npm start`, then open the local URL | `data/events.jsonl` on this machine | Same-origin calls to the local Node API |
+| **Server demo** | `npm start`, then open the local URL | `data/events.jsonl` on this machine | Loopback-only API; same-origin checks, JSON-only writes, runtime logs blocked from static URLs |
 
 The Node server injects a small `CLINIC_SERVER_MODE` marker into the page. Without that marker the page runs in static mode, which is what makes GitHub Pages work. You can force a mode with `?mode=static` or `?mode=server` while testing.
 

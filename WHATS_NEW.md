@@ -14,6 +14,10 @@ A factual cheat sheet for the Max-upgrade round. Every number below is produced 
 
 From any app view, press **Ctrl+K** (or **/** outside a text field). Type at least two characters from an enquiry ID, category, priority or masked message text. Select an **Open [ID]** result to return to **Inbox** and reopen that saved enquiry with its existing emergency and approval state. Results come only from this browser's current local history; no request is made. Result text is inserted as text, so script-like messages are not interpreted as markup.
 
+## Local server request boundary
+
+Run `npm start` to use the server demo. It binds to loopback, validates the request host and browser origin, rejects cross-site Fetch Metadata, requires `application/json` for writes, and refuses static requests for ignored runtime event/generated-data files. These are local demo safeguards, not authentication or permission to expose the server to a network.
+
 ## Round 2 Trust Center
 
 Open **Safety â†’ Trust Center â†’ Run self-tests** to see fresh PASS/FAIL rows. It checks emergency precedence, negated emergency handling, measured emergency recall, configured GP refill routing, synthetic slot exclusion, privacy masking and tamper-detection hash behaviour. The same page links [the hazard log](docs/safety_hazard_log.md) and lists a reviewerâ€™s five-minute path. API permission enforcement is covered by the automated Node server tests.
