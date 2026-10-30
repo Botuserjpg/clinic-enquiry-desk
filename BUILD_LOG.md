@@ -18,7 +18,7 @@ The previous run already established that Git cannot write `.git/index.lock` bec
 ### Completion pass
 
 - `git status` initially failed with `fatal: detected dubious ownership` because `.git` is owned by a different Windows account. I added a one-time `safe.directory` exception for this folder and re-ran the command successfully. This changed only Git's global configuration, not project files.
-- The repository had no commits and every file was untracked. A local commit was attempted later in this pass; the result is recorded below.
+- The repository had no commits and every file was untracked. After the `safe.directory` fix, the local commit succeeded on `main` (35 files). No push was performed.
 - Static mode was missing even though `docs/safety_notes.md` described it. The app always called `fetch('/api/...')` and used root-absolute asset URLs. I added mode detection, relative asset paths, localStorage with an in-memory fallback, browser hash chaining, a mode badge, and a `.nojekyll` file. I then corrected the safety and architecture docs to describe the implemented behavior.
 - The Node server did not mask stored messages and did not return the stored event (timestamp and hash) to the browser. I updated it to mask structured identifiers, add routing and service-level fields, and return the event so both modes render the same result shape.
 - The evaluation tool and report did not report emergency recall. I added the metric and regenerated the report; it reports 4/4 emergency recall on the synthetic fixture.
