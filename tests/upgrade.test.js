@@ -134,6 +134,17 @@ test('command palette enquiry search finds recent local records and returns safe
   assert.doesNotMatch(mission, /item\.innerHTML = `\$\{command\.label\}/);
 });
 
+test('emergency and interpreter contact numbers come from verified clinic config', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(app, /for \(const line of \(config\.helplines \|\| \[\]\)\)/);
+  assert.match(app, /line\.comment \|\| 'Verify before real use\.'/);
+  assert.match(app, /Configured helpline details are synthetic\. Verify before real use\./);
+  assert.match(app, /const service = config\.interpreterService/);
+  assert.doesNotMatch(app, /Lifeline 13 11 14|Healthdirect 1800 022 222|'131 450'/);
+  assert.ok(config.helplines.every(line => /verify before real use/i.test(line.comment)));
+  assert.match(config.interpreterService.comment, /verify before real use/i);
+});
+
 test('FHIR-shaped export is labelled illustrative and CSV escapes text', () => {
   const event = {
     id: 'EVAL-1',

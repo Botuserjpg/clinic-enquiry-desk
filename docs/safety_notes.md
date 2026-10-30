@@ -8,6 +8,8 @@ The classifier checks red-flag phrases before category and urgency rules. A red-
 
 Every reply requires a staff approval action. Approval is an audit event and does not send a message.
 
+Emergency and interpreter contact details in the UI come from `config/clinic.json`; the emergency panel labels the configured lines synthetic and says to verify before real use. If interpreter contact details are absent, the UI shows a configuration warning instead of inserting a fallback number. The emergency 000 instruction itself remains fixed.
+
 Exact duplicate-text detection is an advisory comparison of stored masked messages. It points to an earlier record but does not merge, suppress, reprioritise or downgrade an enquiry. Emergency wording still takes precedence.
 
 ## Network behavior

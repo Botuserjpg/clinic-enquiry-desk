@@ -699,11 +699,17 @@
     copy.textContent = 'Tell the sender to call 000 now. Do not wait for a reply from the clinic. This demo does not contact the sender or emergency services.';
     const helplines = document.createElement('div');
     helplines.className = 'helplines';
-    for (const line of ['Emergency 000', 'Lifeline 13 11 14', 'Healthdirect 1800 022 222']) {
+    for (const line of (config.helplines || [])) {
+      if (!line || !line.name || !line.number) continue;
       const chip = document.createElement('span');
-      chip.textContent = line;
+      chip.textContent = `${line.name} ${line.number}`;
+      chip.title = line.comment || 'Verify before real use.';
+      chip.setAttribute('aria-label', `${line.name}, ${line.number}. ${line.comment || 'Verify before real use.'}`);
       helplines.append(chip);
     }
+    const verifyHelplines = document.createElement('p');
+    verifyHelplines.className = 'chart-note';
+    verifyHelplines.textContent = 'Configured helpline details are synthetic. Verify before real use.';
     const triggers = document.createElement('div');
     triggers.className = 'trigger-list';
     for (const phrase of result.triggers || result.redFlags || []) {
@@ -800,7 +806,7 @@
       locked.textContent = 'Reply draft stays locked until this is acknowledged.';
       ackRow.append(label, ackButton, locked);
     }
-    box.append(kicker, call, copy, helplines, triggers, actions, ackRow);
+    box.append(kicker, call, copy, helplines, verifyHelplines, triggers, actions, ackRow);
     return box;
   }
 
@@ -924,8 +930,11 @@
 
     if (result.emergency) resultContent.append(makeEmergencyBox(result, acknowledged));
     if (evidence.interpreterSuggested) {
-      const tis = (config.interpreterService && config.interpreterService.number) || '131 450';
-      resultContent.append(infoBox('Interpreter may be needed', `A non-English greeting or phrase was detected. Offer a plain-English reply and ask whether an interpreter is wanted. Use the Translating and Interpreting Service on ${tis} (verify before real use). Never auto-translate clinical content.`, 'priority-box'));
+      const service = config.interpreterService;
+      const serviceNote = service && service.number
+        ? `Use ${service.name || 'the configured interpreter service'} on ${service.number}. ${service.comment || 'Verify before real use.'}`
+        : 'No interpreter service is configured. Follow the clinic process and verify contact details before real use.';
+      resultContent.append(infoBox('Interpreter may be needed', `A non-English greeting or phrase was detected. Offer a plain-English reply and ask whether an interpreter is wanted. ${serviceNote} Never auto-translate clinical content.`, 'priority-box'));
     }
     if (result.category === 'Complaint / feedback') {
       resultContent.append(infoBox('Complaint / feedback handling', `Tone score ${evidence.toneScore || 0} (${evidence.toneLabel || 'calm'}). This raises review priority but never lowers an emergency. Route to the Practice Manager and use the complaint reply template.`, 'priority-box'));

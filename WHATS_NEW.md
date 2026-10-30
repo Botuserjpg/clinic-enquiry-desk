@@ -62,7 +62,7 @@ Open **Safety â†’ Trust Center â†’ Run self-tests** to see fresh PASS/
 ### Emergency gate
 
 1. Triage `I have chest pain and cannot breathe.`
-2. The emergency box appears with **CALL 000 NOW**, the configured helplines, and the matched trigger chips.
+2. The emergency box appears with **CALL 000 NOW**, helplines read from `config/clinic.json`, a visible **verify before real use** note, and the matched trigger chips.
 3. The reply draft stays locked. Tick **I have read the 000 instruction and will relay it now.** and click **Acknowledge emergency**.
 4. Only then does the approval control unlock. The emergency template is fixed; tone, FAQ and slot controls cannot replace it.
 5. The **sticky emergency strip** appears on every view and shows how many emergency matches still need acknowledgement.

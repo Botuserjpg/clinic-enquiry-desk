@@ -157,7 +157,7 @@ python -m pytest -q
 Current results (recorded from real runs in the final working session):
 
 - `node --check` on every project JavaScript file: **all passed**.
-- `npm test`: **24/24 passed** (last local audit).
+- `npm test`: **25/25 passed** (last local audit).
 - `python -m unittest discover -s tests -v`: **23/23 passed**.
 - `python -m pytest -q`: **23 passed, 12 subtests passed**.
 - Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
