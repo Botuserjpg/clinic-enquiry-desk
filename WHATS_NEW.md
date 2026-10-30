@@ -1,4 +1,8 @@
-## Inbox scroll stability follow-up\n\nOn Inbox > Message, clicking the message field preserves the current viewport if focus would otherwise shift it. Selecting Inbox while already in Inbox also preserves scroll. The Triage shortcut scrolls the composer into view only when it is outside the viewport.\n\n﻿# What's new in Clinic Mission Control
+﻿## Inbox scroll stability follow-up
+
+On Inbox > Message, clicking the message field preserves the current viewport if focus would otherwise shift it. Selecting Inbox while already in Inbox also preserves scroll. The Triage shortcut scrolls the composer into view only when it is outside the viewport.
+
+# What's new in Clinic Mission Control
 
 A factual cheat sheet for the Max-upgrade round. Every number below is produced by the code in this repository; every path below is a real control in `index.html`. All data is synthetic.
 
@@ -121,7 +125,7 @@ Open **Safety â†’ Trust Center â†’ Run self-tests** to see fresh PASS/
 - Emergency recall: **100.0% (232/232)**. Emergency false positives: **50** (3.94% of non-emergency rows).
 - Human-review rate: **40.8%**.
 - Evaluation latency is shown from the current generated report and Safety Net bundle. It is measured locally and varies by machine; the previous Node classifier benchmark was 42.98 ms for 1,500 rows.
-- Automated checks: **20 JavaScript tests** and **23 Python tests** (plus **12 subtests**) pass; `node --check` passes on every project script.
+- Automated checks: **21 JavaScript tests** and **23 Python tests** (plus **12 subtests**) pass; `node --check` passes on every project script.
 - Final headless Edge reports cover `file://`, static root, GitHub-style subpath and Node server mode. Static runs made **0** `/api/` requests; every mode had **0** unexpected external requests, console errors and page exceptions. The Trust Center's seven self-tests passed, the full Rules Lab reported 1,500 rows, and keyboard focus plus reduced-motion handling passed the browser smoke check.
 - 8 real screenshots in `docs/screenshots/` were captured from the final static build, including the full-set Rules Lab and Trust Center PASS results.
 

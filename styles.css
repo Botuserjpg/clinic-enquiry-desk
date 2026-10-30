@@ -58,7 +58,9 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/* Keep browser-initiated focus scrolling predictable. Controls that intentionally
+   animate navigation request smooth behaviour explicitly in JavaScript. */
+html { scroll-behavior: auto; }
 body {
   margin: 0;
   min-width: 320px;

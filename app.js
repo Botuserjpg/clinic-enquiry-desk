@@ -1359,7 +1359,7 @@
         const root = document.documentElement;
         const previousBehaviour = root.style.scrollBehavior;
         root.style.scrollBehavior = 'auto';
-        window.scrollTo(0, beforeFocus);
+        window.scrollTo({ top: beforeFocus, behavior: 'instant' });
         root.style.scrollBehavior = previousBehaviour;
       });
     };

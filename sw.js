@@ -1,13 +1,23 @@
 /* Static-only service worker for Clinic Mission Control. It never caches /api/. */
-const CACHE = 'clinic-mission-control-v1';
+const CACHE = 'clinic-mission-control-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './upgrade.css',
   './theme.js',
   './rules.js',
   './config/clinic.js',
+  './faq.js',
+  './data/fixtures.js',
+  './data/evaluation_fixtures.js',
+  './docs/evaluation_metrics.js',
   './classifier.js',
+  './knowledge.js',
+  './extras.js',
+  './views.js',
+  './ruleslab.js',
+  './safety-net.js',
   './app.js',
   './mission.js',
   './manifest.webmanifest',
@@ -44,29 +54,21 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes('/api/')) return;
 
+  const fetchAndCache = () => fetch(request, { cache: 'no-cache' }).then(response => {
+    if (!response.ok) return response;
+    const copy = response.clone();
+    return caches.open(CACHE)
+      .then(cache => cache.put(request, copy).catch(() => {}))
+      .then(() => response);
+  });
+
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => {});
-          return response;
-        })
+      fetchAndCache()
         .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => {});
-        }
-        return response;
-      });
-    })
-  );
+  event.respondWith(fetchAndCache().catch(() => caches.match(request)));
 });

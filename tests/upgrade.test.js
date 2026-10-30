@@ -192,7 +192,20 @@ test('message focus and same-view navigation preserve the typing position', () =
   const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
   assert.match(appSource, /messageInput\.addEventListener\('pointerdown'/);
   assert.match(appSource, /messageInput\.addEventListener\('pointerup', restoreMessagePointerPosition\)/);
-  assert.match(appSource, /window\.scrollTo\(0, beforeFocus\)/);
+  assert.match(appSource, /window\.scrollTo\(\{ top: beforeFocus, behavior: 'instant' \}\)/);
+  const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
+  assert.match(css, /html\s*\{\s*scroll-behavior:\s*auto;/);
+});
+
+test('service worker refreshes same-origin assets and retains offline cache fallback', () => {
+  const worker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  assert.match(worker, /clinic-mission-control-v2/);
+  assert.match(worker, /fetch\(request, \{ cache: 'no-cache' \}\)/);
+  assert.match(worker, /fetchAndCache\(\)\.catch\(\(\) => caches\.match\(request\)\)/);
+  assert.match(worker, /url\.pathname\.includes\('\/api\/'\)/);
+  for (const asset of ['./upgrade.css', './views.js', './ruleslab.js', './safety-net.js', './data/evaluation_fixtures.js']) {
+    assert.ok(worker.includes(`'${asset}'`), `offline precache includes ${asset}`);
+  }
 });
 
 test('masking removes identifiers and never removes the 000 instruction', () => {
