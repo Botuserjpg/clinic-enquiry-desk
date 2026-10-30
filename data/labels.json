@@ -1,0 +1,14 @@
+[
+  { "id": "SYN-001", "category": "Appointments", "priority": "Routine", "redFlags": [] },
+  { "id": "SYN-002", "category": "Prescription refill", "priority": "Prompt review", "redFlags": [] },
+  { "id": "SYN-003", "category": "Test results", "priority": "Routine", "redFlags": [] },
+  { "id": "SYN-004", "category": "Billing", "priority": "Routine", "redFlags": [] },
+  { "id": "SYN-005", "category": "General enquiry", "priority": "Routine", "redFlags": [] },
+  { "id": "SYN-006", "category": "Emergency", "priority": "Emergency wording", "redFlags": ["chest pain"] },
+  { "id": "SYN-007", "category": "Emergency", "priority": "Emergency wording", "redFlags": ["suicidal"] },
+  { "id": "SYN-008", "category": "Appointments", "priority": "Prompt review", "redFlags": [] },
+  { "id": "SYN-009", "category": "Billing", "priority": "Routine", "redFlags": [] },
+  { "id": "SYN-010", "category": "Emergency", "priority": "Emergency wording", "redFlags": ["shortness of breath"] },
+  { "id": "SYN-011", "category": "Prescription refill", "priority": "Prompt review", "redFlags": [] },
+  { "id": "SYN-012", "category": "Emergency", "priority": "Emergency wording", "redFlags": ["cannot breathe"] }
+]

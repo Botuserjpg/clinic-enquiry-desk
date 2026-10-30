@@ -1,0 +1,14 @@
+[
+  { "id": "SYN-001", "message": "Could I book an appointment next week?" },
+  { "id": "SYN-002", "message": "Please call me today about a repeat prescription." },
+  { "id": "SYN-003", "message": "Could someone call about my blood test results?" },
+  { "id": "SYN-004", "message": "Can you explain how I pay this invoice?" },
+  { "id": "SYN-005", "message": "Could a staff member call me back?" },
+  { "id": "SYN-006", "message": "I have chest pain and need to book an appointment." },
+  { "id": "SYN-007", "message": "I feel suicidal and need help with a prescription." },
+  { "id": "SYN-008", "message": "Can I reschedule my appointment soon?" },
+  { "id": "SYN-009", "message": "I have a Medicare payment question." },
+  { "id": "SYN-010", "message": "I have shortness of breath and want to ask about test results." },
+  { "id": "SYN-011", "message": "Please help with a repeat script today." },
+  { "id": "SYN-012", "message": "I cannot breathe and need an urgent medication refill." }
+]

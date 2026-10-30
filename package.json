@@ -1,0 +1,12 @@
+{
+  "name": "clinic-enquiry-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Synthetic-data GP clinic enquiry triage prototype for Australia",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/classifier.test.js",
+    "test:python": "python -m unittest discover -s tests -v",
+    "evaluate": "python tools/evaluate.py --report docs/evaluation_report.md"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "redFlags": [
+    "chest pain",
+    "can't breathe",
+    "cannot breathe",
+    "difficulty breathing",
+    "shortness of breath",
+    "short of breath",
+    "unconscious",
+    "severe bleeding",
+    "overdose",
+    "suicidal"
+  ],
+  "categories": [
+    { "name": "Appointments", "terms": ["appointment", "booking", "book", "reschedule", "cancel"] },
+    { "name": "Prescription refill", "terms": ["prescription", "repeat", "medication", "script", "refill"] },
+    { "name": "Test results", "terms": ["test result", "results", "pathology", "blood test"] },
+    { "name": "Billing", "terms": ["bill", "billing", "invoice", "payment", "medicare"] }
+  ],
+  "promptReviewWords": ["today", "asap", "urgent", "soon", "worsening"],
+  "priorities": {
+    "emergency": "Emergency wording",
+    "promptReview": "Prompt review",
+    "routine": "Routine"
+  },
+  "replies": {
+    "emergency": "Please call 000 now. Do not wait for a reply from the clinic. A staff member will follow up when appropriate.",
+    "routine": "Thanks for contacting the clinic. We have received your enquiry and a staff member will review it. We will be in touch during clinic hours."
+  },
+  "routing": {
+    "Emergency": "Practice Nurse",
+    "Appointments": "Receptionist",
+    "Prescription refill": "GP",
+    "Test results": "Practice Nurse",
+    "Billing": "Receptionist",
+    "General enquiry": "Receptionist"
+  },
+  "serviceLevels": {
+    "Emergency wording": 0,
+    "Prompt review": 60,
+    "Routine": 480
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "clinicName": "Riverbend Family Practice (synthetic)",
+  "timezone": "Australia/Sydney",
+  "openingHours": {
+    "monday": "08:30-17:30",
+    "tuesday": "08:30-17:30",
+    "wednesday": "08:30-17:30",
+    "thursday": "08:30-17:30",
+    "friday": "08:30-17:30",
+    "saturday": "09:00-12:00",
+    "sunday": "closed"
+  },
+  "publicHolidays": [
+    "2026-01-01",
+    "2026-01-26",
+    "2026-04-03",
+    "2026-04-06",
+    "2026-04-25",
+    "2026-12-25",
+    "2026-12-26"
+  ],
+  "staffRoster": [
+    { "role": "Receptionist", "name": "Synthetic Reception A" },
+    { "role": "Practice Nurse", "name": "Synthetic Nurse A" },
+    { "role": "GP", "name": "Synthetic GP A" },
+    { "role": "Practice Manager", "name": "Synthetic Manager A" }
+  ]
+}

@@ -1,0 +1,8 @@
+node_modules/
+data/events.jsonl
+data/generated_enquiries.json
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+Thumbs.db

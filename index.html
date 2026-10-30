@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153a34">
+  <meta name="description" content="Synthetic-data clinic enquiry triage prototype. Demonstration only, not medical advice.">
+  <link rel="icon" href="data:,">
+  <title>Clinic Enquiry Desk</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="./" aria-label="Clinic Enquiry Desk home"><span class="brand-mark">C</span><span>clinic<span class="brand-light">desk</span></span></a><span class="demo-tag"><span class="pulse"></span><span id="mode-label">LOCAL DEMO</span></span></header>
+  <main class="layout">
+    <section class="intro">
+      <div><p class="eyebrow">GENERAL PRACTICE <span>/</span> FRONT DESK</p><h1>Enquiry<br><em>workspace.</em></h1><p class="intro-copy">A considered first look at what came through the door.</p><p class="clinic-name" id="clinic-name"></p></div>
+      <aside class="safety"><div class="safety-icon" aria-hidden="true">!</div><div><strong>Demonstration only</strong><p>Use fictional examples. Never enter real patient, health, or personal information. This tool does not provide medical advice.</p><small>Immediate danger? Call <b>000</b>.</small></div></aside>
+    </section>
+    <section class="metrics" aria-label="Enquiry summary">
+      <article class="metric"><span class="metric-label">TOTAL ENQUIRIES</span><strong id="metric-total">0</strong><span class="metric-note">in local history</span></article>
+      <article class="metric"><span class="metric-label">NEEDS REVIEW</span><strong id="metric-review">0</strong><span class="metric-note">awaiting staff approval</span></article>
+      <article class="metric"><span class="metric-label">EMERGENCY FLAGS</span><strong id="metric-emergency">0</strong><span class="metric-note">phrase match · check now</span></article>
+      <article class="metric date-metric"><span class="metric-label">TODAY</span><strong id="today">—</strong><span class="metric-note">local device time</span></article>
+    </section>
+    <div class="workbench">
+      <section class="card intake-card">
+        <div class="card-heading"><div><p class="eyebrow">01 <span>/</span> INTAKE</p><h2>New enquiry</h2></div><span class="icon-bubble" aria-hidden="true">↗</span></div>
+        <p class="muted">Paste a fictional message below. The rules will show their working.</p>
+        <div class="examples"><span class="field-label">TRY AN EXAMPLE</span><button class="example" type="button" data-example="Hi, could I book an appointment next week?"><span>01</span> Appointment</button><button class="example" type="button" data-example="I have chest pain and feel short of breath."><span>02</span> Emergency wording</button><button class="example" type="button" data-example="Could someone call me about my blood test results?"><span>03</span> Test results</button></div>
+        <form id="intake-form"><label class="field-label" for="message">MESSAGE <span class="optional">· fictional only</span></label><textarea id="message" name="message" maxlength="2000" placeholder="Type or paste a fictional enquiry…" required></textarea><div class="field-foot"><span id="char-count">0 / 2,000</span><button class="button button-primary" type="submit">Triage enquiry <span aria-hidden="true">→</span></button></div></form>
+      </section>
+      <section class="card result-card" id="result-card" aria-live="polite">
+        <div class="card-heading"><div><p class="eyebrow">02 <span>/</span> TRIAGE</p><h2>Decision &amp; reply</h2></div><span class="icon-bubble" aria-hidden="true">⌁</span></div>
+        <div class="empty-state" id="empty-state"><span class="empty-mark">✳</span><p>Your triage will appear here.</p><small>Category, priority, phrase matches, routing, and a staff-review draft.</small></div>
+        <div id="result-content" hidden></div>
+      </section>
+    </div>
+    <section class="card history-card">
+      <div class="history-heading"><div><p class="eyebrow">03 <span>/</span> AUDIT TRAIL</p><h2>Recent activity</h2><p class="muted" id="storage-note">Events are appended locally and linked by a hash chain.</p></div><div class="history-actions"><button class="button button-quiet" id="verify-integrity" type="button">Verify integrity</button><button class="button button-quiet" id="simulate-day" type="button">Simulate clinic day</button><button class="button button-quiet" id="refresh-history" type="button">↻ Refresh</button></div></div>
+      <div class="integrity-status" id="integrity-status" role="status" aria-live="polite"></div>
+      <div class="history-list" id="history-list"><p class="history-empty">No activity yet.</p></div>
+    </section>
+    <footer><span>LOCAL DEMONSTRATION · NO EXTERNAL SERVICES</span><span>Synthetic roster · role routing · SLA targets · staff judgement always comes first.</span></footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="rules.js" defer></script>
+  <script src="config/clinic.js" defer></script>
+  <script src="classifier.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
