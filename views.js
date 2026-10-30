@@ -59,10 +59,12 @@
       const target = $(options.focus);
       if (target) {
         target.focus({ preventScroll: true });
-        target.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth', block: 'center' });
+        const bounds = target.getBoundingClientRect();
+        const alreadyVisible = bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+        if (!alreadyVisible) target.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth', block: 'center' });
       }
     } else if (!alreadyActive && !options.preserveScroll) {
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
     document.dispatchEvent(new CustomEvent('clinic:view', { detail: { view } }));
   }

@@ -171,7 +171,7 @@ test('static shell stays relative, local-only and free of external assets', () =
   assert.equal(/\/api\//.test(html), false);
 });
 
-test('same-view navigation does not reset scroll; switching views still starts at the top', () => {
+test('message focus and same-view navigation preserve the typing position', () => {
   const windowMock = { location: { hash: '#inbox' }, scrolls: [], scrollTo(...args) { this.scrolls.push(args); } };
   const documentMock = {
     readyState: 'loading',
@@ -189,6 +189,10 @@ test('same-view navigation does not reset scroll; switching views still starts a
   assert.equal(windowMock.scrolls.length, 0, 'reselecting Inbox should preserve the typing position');
   windowMock.ClinicViews.showView('queue');
   assert.equal(windowMock.scrolls.length, 1, 'switching to a different view should reset its position');
+  const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(appSource, /messageInput\.addEventListener\('pointerdown'/);
+  assert.match(appSource, /messageInput\.addEventListener\('pointerup', restoreMessagePointerPosition\)/);
+  assert.match(appSource, /window\.scrollTo\(0, beforeFocus\)/);
 });
 
 test('masking removes identifiers and never removes the 000 instruction', () => {

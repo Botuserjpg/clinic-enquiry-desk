@@ -1345,6 +1345,26 @@
     if (messageInput) messageInput.setAttribute('aria-invalid', text ? 'true' : 'false');
   }
   if (messageInput) {
+    let pointerScrollPosition = null;
+    messageInput.addEventListener('pointerdown', () => {
+      pointerScrollPosition = window.scrollY;
+    }, { passive: true });
+    messageInput.addEventListener('blur', () => { pointerScrollPosition = null; });
+    const restoreMessagePointerPosition = () => {
+      if (pointerScrollPosition === null) return;
+      const beforeFocus = pointerScrollPosition;
+      pointerScrollPosition = null;
+      requestAnimationFrame(() => {
+        if (document.activeElement !== messageInput || Math.abs(window.scrollY - beforeFocus) < 2) return;
+        const root = document.documentElement;
+        const previousBehaviour = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
+        window.scrollTo(0, beforeFocus);
+        root.style.scrollBehavior = previousBehaviour;
+      });
+    };
+    messageInput.addEventListener('focus', restoreMessagePointerPosition);
+    messageInput.addEventListener('pointerup', restoreMessagePointerPosition);
     messageInput.addEventListener('input', () => {
       setText('#char-count', `${messageInput.value.length.toLocaleString('en-AU')} / 2,000`);
       if (messageInput.value.trim()) setMessageError('');

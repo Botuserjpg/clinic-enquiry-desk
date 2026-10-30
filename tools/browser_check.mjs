@@ -182,6 +182,24 @@ async function main() {
     root.style.scrollBehavior = oldBehaviour;
     return { before, after, preserved: Math.abs(before - after) <= 1 };
   })()`);
+  const messagePoint = await evaluate(`(async () => {
+    const input = document.querySelector('#message');
+    input.blur();
+    input.scrollIntoView({ block: 'center', behavior: 'instant' });
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const bounds = input.getBoundingClientRect();
+    return { x: Math.round(bounds.left + Math.min(90, bounds.width / 3)), y: Math.round(bounds.top + Math.min(35, bounds.height / 2)), before: window.scrollY };
+  })()`);
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: messagePoint.x, y: messagePoint.y });
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: messagePoint.x, y: messagePoint.y, button: 'left', clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: messagePoint.x, y: messagePoint.y, button: 'left', clickCount: 1 });
+  await sleep(100);
+  const messageFocusScroll = await evaluate(`(() => ({
+    focused: document.activeElement === document.querySelector('#message'),
+    before: ${messagePoint.before},
+    after: window.scrollY,
+    preserved: Math.abs(window.scrollY - ${messagePoint.before}) <= 1,
+  }))()`);
 
   await screenshot('01-inbox.png');
 
@@ -363,6 +381,7 @@ async function main() {
     mode: initial.mode,
     initial,
     sameViewScroll,
+    messageFocusScroll,
     triage,
     emergency,
     dashboard,
@@ -401,6 +420,7 @@ async function main() {
   if (!command.open || !command.results) throw new Error('Command palette did not render results.');
   if (!command.keyboardFocus || !await evaluate('document.querySelector("#command-palette").hidden')) throw new Error('Keyboard palette open/focus/close check failed.');
   if (!sameViewScroll.preserved) throw new Error(`Selecting the active view moved the page: ${JSON.stringify(sameViewScroll)}`);
+  if (!messageFocusScroll.focused || !messageFocusScroll.preserved) throw new Error(`Focusing the message field moved the page: ${JSON.stringify(messageFocusScroll)}`);
 }
 
 try {

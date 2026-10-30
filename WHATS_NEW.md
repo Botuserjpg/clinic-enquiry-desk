@@ -1,4 +1,4 @@
-﻿# What's new in Clinic Mission Control
+## Inbox scroll stability follow-up\n\nOn Inbox > Message, clicking the message field preserves the current viewport if focus would otherwise shift it. Selecting Inbox while already in Inbox also preserves scroll. The Triage shortcut scrolls the composer into view only when it is outside the viewport.\n\n﻿# What's new in Clinic Mission Control
 
 A factual cheat sheet for the Max-upgrade round. Every number below is produced by the code in this repository; every path below is a real control in `index.html`. All data is synthetic.
 
