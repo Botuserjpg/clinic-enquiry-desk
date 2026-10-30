@@ -24,6 +24,11 @@ const eventFile = process.env.CLINIC_EVENT_FILE
   ? path.resolve(process.env.CLINIC_EVENT_FILE)
   : path.join(dataDirectory, 'events.jsonl');
 const eventDirectory = path.dirname(eventFile);
+const PRIVATE_RUNTIME_FILES = new Set([
+  eventFile,
+  path.join(dataDirectory, 'events.jsonl'),
+  path.join(dataDirectory, 'generated_enquiries.json'),
+].map(file => path.resolve(file)));
 
 // Same fictional matrix as the browser. The server is the enforcement point in
 // server mode; the browser copy only produces a friendlier message.
@@ -93,6 +98,43 @@ function sendApiError(response, error) {
   sendJson(response, status, { error: message });
 }
 
+function apiRequestAllowed(request, response) {
+  let requestUrl;
+  try {
+    requestUrl = new URL(`http://${request.headers.host || ''}`);
+  } catch {
+    sendJson(response, 400, { error: 'Invalid local request host.' });
+    return false;
+  }
+  const address = server.address();
+  const allowedHost = ['localhost', '127.0.0.1'].includes(requestUrl.hostname);
+  const allowedPort = address && typeof address === 'object' && Number(requestUrl.port) === address.port;
+  if (!allowedHost || !allowedPort) {
+    sendJson(response, 403, { error: 'The local API only accepts requests addressed to this loopback server.' });
+    return false;
+  }
+
+  const origin = request.headers.origin;
+  if (origin) {
+    let originUrl;
+    try { originUrl = new URL(origin); } catch { originUrl = null; }
+    if (!originUrl || originUrl.protocol !== 'http:' || originUrl.hostname !== requestUrl.hostname || originUrl.port !== requestUrl.port) {
+      sendJson(response, 403, { error: 'Cross-origin API requests are not allowed.' });
+      return false;
+    }
+  }
+  const fetchSite = request.headers['sec-fetch-site'];
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+    sendJson(response, 403, { error: 'Cross-origin API requests are not allowed.' });
+    return false;
+  }
+  if (request.method === 'POST' && !/^application\/json(?:\s*;|$)/i.test(request.headers['content-type'] || '')) {
+    sendJson(response, 415, { error: 'API requests must use application/json.' });
+    return false;
+  }
+  return true;
+}
+
 function readJson(request) {
   return new Promise((resolve, reject) => {
     const declared = Number(request.headers['content-length'] || 0);
@@ -133,6 +175,7 @@ function findEnquiry(events, id) {
 }
 
 function handleApi(request, response, pathname) {
+  if (!apiRequestAllowed(request, response)) return;
   if (request.method === 'GET' && pathname === '/api/history') {
     sendJson(response, 200, readEvents());
     return;
@@ -287,6 +330,7 @@ function resolveStaticFile(pathname) {
   const requested = decoded === '/' ? '/index.html' : decoded;
   const filePath = path.resolve(root, `.${requested}`);
   if (filePath !== root && !filePath.startsWith(root + path.sep)) return null;
+  if (PRIVATE_RUNTIME_FILES.has(filePath)) return null;
   const relative = path.relative(root, filePath);
   if (relative.split(path.sep).some(part => part.startsWith('.') && part !== '.well-known')) return null;
   return filePath;

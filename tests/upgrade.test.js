@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
@@ -270,9 +271,11 @@ test('masking removes identifiers and never removes the 000 instruction', () => 
 test('server enforces permissions, acknowledgement, status and double-booking', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'clinic-server-test-'));
   process.env.CLINIC_EVENT_FILE = path.join(directory, 'events.jsonl');
-  const { server } = require('../server.js');
+  const { server, resolveStaticFile } = require('../server.js');
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
+  assert.equal(resolveStaticFile('/data/events.jsonl'), null, 'ignored server history is not a static asset');
+  assert.equal(resolveStaticFile('/data/generated_enquiries.json'), null, 'ignored generated data is not a static asset');
   const portCollision = spawnSync(process.execPath, [path.join(root, 'server.js')], {
     env: { ...process.env, PORT: String(server.address().port) },
     encoding: 'utf8',
@@ -290,6 +293,45 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
     return { status: response.status, body: await response.json(), headers: response.headers };
   };
   try {
+    const sameOriginRead = await fetch(`${base}/api/history`, { headers: { Origin: base } });
+    assert.equal(sameOriginRead.status, 200, 'the app origin remains allowed');
+    const sameOriginWrite = await fetch(`${base}/api/enquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: base },
+      body: JSON.stringify({ message: 'Could I ask about the clinic car park?' }),
+    });
+    assert.equal(sameOriginWrite.status, 201, 'same-origin browser-style JSON writes remain allowed');
+    const crossOriginRead = await fetch(`${base}/api/history`, { headers: { Origin: 'https://attacker.example' } });
+    assert.equal(crossOriginRead.status, 403);
+    assert.deepEqual(await crossOriginRead.json(), { error: 'Cross-origin API requests are not allowed.' });
+    const hostileHostStatus = await new Promise((resolve, reject) => {
+      const hostileRequest = http.get({
+        hostname: '127.0.0.1',
+        port: server.address().port,
+        path: '/api/history',
+        headers: { Host: `attacker.example:${server.address().port}` },
+      }, response => {
+        response.resume();
+        response.on('end', () => resolve(response.statusCode));
+      });
+      hostileRequest.on('error', reject);
+    });
+    assert.equal(hostileHostStatus, 403);
+    const crossSiteWrite = await fetch(`${base}/api/enquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' },
+      body: JSON.stringify({ message: 'Attempted cross-site write.' }),
+    });
+    assert.equal(crossSiteWrite.status, 403);
+    const simpleWrite = await fetch(`${base}/api/enquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ message: 'Attempted simple cross-origin write.' }),
+    });
+    assert.equal(simpleWrite.status, 415);
+    assert.equal((await fetch(`${base}/data/events.jsonl`)).status, 403);
+    assert.equal((await fetch(`${base}/data/generated_enquiries.json`)).status, 403);
+
     const created = await post('/api/enquiries', { message: 'I need a repeat prescription for my blood pressure medication.' });
     assert.equal(created.status, 201);
     assert.equal(created.headers.get('x-content-type-options'), 'nosniff');

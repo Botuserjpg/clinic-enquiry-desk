@@ -12,7 +12,7 @@ Exact duplicate-text detection is an advisory comparison of stored masked messag
 
 ## Network behavior
 
-Static demo mode uses the bundled classifier and rules, and reads/writes only browser localStorage (or an in-memory fallback). Its code path does not call the application API. Server mode uses same-origin `fetch` calls to the local Node API for triage, approval and history; the server binds to loopback.
+Static demo mode uses the bundled classifier and rules, and reads/writes only browser localStorage (or an in-memory fallback). Its code path does not call the application API. Server mode uses same-origin `fetch` calls to the local Node API for triage, approval and history; the server binds to loopback. API routes validate loopback Host, same-origin Origin and Fetch Metadata when present, and require JSON for writes. The server also refuses static requests for ignored runtime event and generated-data files. These checks reduce browser-based cross-site requests; they do not add user authentication or make the demo suitable for network exposure.
 
 Search evidence (run from the repository root; this audit used the PowerShell form):
 
