@@ -119,6 +119,39 @@ async function screenshot(name) {
   fs.writeFileSync(path.join(out, name), Buffer.from(result.data, 'base64'));
 }
 
+async function clickSelector(selector) {
+  const point = await evaluate(`(async () => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) return null;
+    element.scrollIntoView({ block: 'center', behavior: 'instant' });
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const bounds = element.getBoundingClientRect();
+    return {
+      x: Math.round(bounds.left + bounds.width / 2),
+      y: Math.round(bounds.top + bounds.height / 2),
+      before: window.scrollY,
+    };
+  })()`);
+  if (!point) throw new Error(`Cannot click missing selector: ${selector}`);
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await sleep(180);
+  return point;
+}
+
+async function hiddenViolations() {
+  return evaluate(`(() => [...document.querySelectorAll('[hidden]')]
+    .filter(element => getComputedStyle(element).display !== 'none')
+    .map(element => ({
+      tag: element.tagName,
+      id: element.id,
+      className: typeof element.className === 'string' ? element.className : '',
+      display: getComputedStyle(element).display,
+      height: Math.round(element.getBoundingClientRect().height),
+    })))()`);
+}
+
 async function main() {
   await waitForChrome();
   const created = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT' });
@@ -169,10 +202,18 @@ async function main() {
     heroRecall: (document.querySelector('#hero-recall') || {}).textContent,
     onboardingVisible: !document.querySelector('#onboarding').hidden,
     emergencyStripHidden: document.querySelector('#emergency-strip').hidden,
+    emergencyStripDisplay: getComputedStyle(document.querySelector('#emergency-strip')).display,
     emergencyGate: Boolean(document.querySelector('#emergency-strip')),
     hasSkipLink: Boolean(document.querySelector('.skip-link')),
     localOnly: performance.getEntriesByType('resource').every(entry => entry.name.startsWith('file:') || entry.name.startsWith(location.origin) || /kaspersky-labs\\.com\\//i.test(entry.name)),
   }))()`);
+  initial.hiddenViolations = await hiddenViolations();
+  if (initial.hiddenViolations.length) throw new Error(`Hidden elements are still rendered: ${JSON.stringify(initial.hiddenViolations)}`);
+  await evaluate(`(() => {
+    window.__viewEvents = [];
+    document.addEventListener('clinic:view', event => window.__viewEvents.push(event.detail && event.detail.view));
+    return true;
+  })()`);
 
   const sameViewScroll = await evaluate(`(() => {
     const root = document.documentElement;
@@ -186,6 +227,7 @@ async function main() {
     root.style.scrollBehavior = oldBehaviour;
     return { before, after, preserved: Math.abs(before - after) <= 1 };
   })()`);
+  await evaluate(`window.__viewEvents = []; true`);
   const messagePoint = await evaluate(`(async () => {
     const input = document.querySelector('#message');
     input.blur();
@@ -197,27 +239,31 @@ async function main() {
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: messagePoint.x, y: messagePoint.y });
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: messagePoint.x, y: messagePoint.y, button: 'left', clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: messagePoint.x, y: messagePoint.y, button: 'left', clickCount: 1 });
+  await send('Input.insertText', { text: 'Hi, could I book an appointment next week?' });
   await sleep(100);
   const messageFocusScroll = await evaluate(`(() => ({
     focused: document.activeElement === document.querySelector('#message'),
     before: ${messagePoint.before},
     after: window.scrollY,
     preserved: Math.abs(window.scrollY - ${messagePoint.before}) <= 1,
+    value: document.querySelector('#message').value,
+    charCount: document.querySelector('#char-count').textContent,
+    view: window.ClinicViews.currentView(),
+    viewEvents: window.__viewEvents.length,
   }))()`);
 
   await screenshot('01-inbox.png');
 
+  await clickSelector('#intake-form button[type="submit"]');
   const triage = await evaluate(`(async () => {
-    const input = document.querySelector('#message');
-    input.value = 'Hi, could I book an appointment next week?';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    document.querySelector('#intake-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     for (let attempt = 0; attempt < 60; attempt += 1) {
       await new Promise(resolve => setTimeout(resolve, 100));
       const content = document.querySelector('#result-content');
       if (content && !content.hidden && content.textContent.includes('Appointments')) break;
     }
     const content = document.querySelector('#result-content');
+    const empty = document.querySelector('#empty-state');
+    const skeleton = document.querySelector('#pipeline-skeleton');
     return {
       visible: !content.hidden,
       text: content.textContent.slice(0, 600),
@@ -227,8 +273,16 @@ async function main() {
       studio: Boolean(content.querySelector('#reply-draft')),
       approvalName: Boolean(content.querySelector('#approval-name')),
       audit: Boolean(content.querySelector('.enquiry-audit')),
+      auditText: (content.querySelector('.enquiry-audit') || {}).textContent || '',
+      emptyDisplay: getComputedStyle(empty).display,
+      emptyHidden: empty.hidden,
+      skeletonDisplay: getComputedStyle(skeleton).display,
+      skeletonHidden: skeleton.hidden,
+      viewEvents: window.__viewEvents.length,
     };
   })()`);
+  triage.hiddenViolations = await hiddenViolations();
+  if (triage.hiddenViolations.length) throw new Error(`Hidden elements are still rendered after triage: ${JSON.stringify(triage.hiddenViolations)}`);
   await screenshot('02-decision-pipeline.png');
 
   const emergency = await evaluate(`(async () => {
@@ -253,6 +307,26 @@ async function main() {
     };
   })()`);
   await screenshot('03-emergency-gate.png');
+
+  const emergencyNavigation = await evaluate(`(async () => {
+    window.ClinicViews.showView('dashboard');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const leftDashboard = window.ClinicViews.currentView();
+    document.querySelector('#emergency-strip-open').click();
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (window.ClinicViews.currentView() === 'inbox') break;
+    }
+    return {
+      leftDashboard,
+      view: window.ClinicViews.currentView(),
+      emergencyBox: Boolean(document.querySelector('#result-content .emergency-box')),
+      stripHidden: document.querySelector('#emergency-strip').hidden,
+    };
+  })()`);
+  if (emergencyNavigation.leftDashboard !== 'dashboard' || emergencyNavigation.view !== 'inbox' || !emergencyNavigation.emergencyBox) {
+    throw new Error(`Open oldest emergency did not navigate to Inbox: ${JSON.stringify(emergencyNavigation)}`);
+  }
 
   await evaluate(`(async () => {
     const messages = [
@@ -286,6 +360,9 @@ async function main() {
     total: (document.querySelector('#metric-total') || {}).textContent,
     reviewRate: (document.querySelector('#metric-review-rate') || {}).textContent,
     ack: (document.querySelector('#metric-ack') || {}).textContent,
+    emergency: (document.querySelector('#metric-emergency') || {}).textContent,
+    emergencyNote: (document.querySelector('#metric-emergency-note') || {}).textContent,
+    heroEmergencyNote: (document.querySelector('#hero-emergency-note') || {}).textContent,
   }))()`);
   await screenshot('04-dashboard.png');
 
@@ -346,7 +423,7 @@ async function main() {
 
   await evaluate(`window.ClinicViews.showView('simulator'); true`);
   await sleep(250);
-  const simulator = await evaluate(`(() => {
+  const simulatorBefore = await evaluate(`(() => {
     const slider = document.querySelector('#staff-gps');
     slider.value = '3';
     slider.dispatchEvent(new Event('input', { bubbles: true }));
@@ -354,9 +431,29 @@ async function main() {
       patternBars: document.querySelectorAll('#sim-pattern span').length,
       capacity: document.querySelector('#sim-capacity').textContent.trim(),
       liveCards: document.querySelectorAll('#sim-live .metric').length,
+      next: document.querySelector('#sim-next').textContent.trim(),
+      pauseDisplay: getComputedStyle(document.querySelector('#sim-pause')).display,
+      resetDisplay: getComputedStyle(document.querySelector('#sim-reset')).display,
     };
   })()`);
+  await clickSelector('#sim-start');
+  await sleep(300);
+  const simulatorRunning = await evaluate(`(() => ({
+    start: document.querySelector('#sim-start').textContent.trim(),
+    next: document.querySelector('#sim-next').textContent.trim(),
+    pauseHidden: document.querySelector('#sim-pause').hidden,
+    pauseDisplay: getComputedStyle(document.querySelector('#sim-pause')).display,
+    resetHidden: document.querySelector('#sim-reset').hidden,
+    resetDisplay: getComputedStyle(document.querySelector('#sim-reset')).display,
+  }))()`);
   await screenshot('08-simulator.png');
+  await clickSelector('#sim-reset');
+  const simulator = { ...simulatorBefore, running: simulatorRunning };
+  if (simulatorRunning.pauseHidden || simulatorRunning.pauseDisplay === 'none'
+    || simulatorRunning.resetHidden || simulatorRunning.resetDisplay === 'none'
+    || !simulatorRunning.next.includes('Next arrival: within about')) {
+    throw new Error(`Simulator controls or next-arrival copy failed: ${JSON.stringify(simulatorRunning)}`);
+  }
 
   const command = await evaluate(`(async () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
@@ -375,6 +472,32 @@ async function main() {
   })()`);
   await screenshot('09-command-palette.png');
   await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true`);
+
+  const commandExample = await evaluate(`(async () => {
+    window.ClinicViews.showView('dashboard');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const input = document.querySelector('#command-input');
+    input.value = 'appointment example';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const item = [...document.querySelectorAll('#command-list .command-item')]
+      .find(option => option.textContent.includes('Triage an appointment example'));
+    if (!item) return { found: false, commandText: document.querySelector('#command-list').textContent };
+    item.click();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    return {
+      found: true,
+      view: window.ClinicViews.currentView(),
+      paletteHidden: document.querySelector('#command-palette').hidden,
+      focused: document.activeElement === document.querySelector('#message'),
+      value: document.querySelector('#message').value,
+    };
+  })()`);
+  if (!commandExample.found || commandExample.view !== 'inbox' || !commandExample.paletteHidden
+    || !commandExample.focused || !commandExample.value.includes('appointment')) {
+    throw new Error(`Command-palette example did not reveal Inbox: ${JSON.stringify(commandExample)}`);
+  }
 
   const identityFlow = await evaluate(`(async () => {
     window.ClinicViews.showView('inbox');
@@ -416,6 +539,7 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 100));
       if (document.querySelector('.reply-actions .review-note.approved')) break;
     }
+    const auditText = (document.querySelector('.enquiry-audit') || {}).textContent || '';
     return {
       ackErrorShown,
       ackBlocked,
@@ -423,11 +547,44 @@ async function main() {
       draftUnlocked,
       approvalErrorShown,
       approved: Boolean(document.querySelector('.reply-actions .review-note.approved')),
+      auditHasApproval: /reply approved/i.test(auditText),
+      auditText: auditText.slice(0, 300),
     };
   })()`);
   if (!identityFlow.ackErrorShown || !identityFlow.ackBlocked || !identityFlow.ackRecorded
-    || !identityFlow.draftUnlocked || !identityFlow.approvalErrorShown || !identityFlow.approved) {
+    || !identityFlow.draftUnlocked || !identityFlow.approvalErrorShown || !identityFlow.approved
+    || !identityFlow.auditHasApproval) {
     throw new Error(`Inline staff identity flow failed: ${JSON.stringify(identityFlow)}`);
+  }
+
+  const clearHistory = await evaluate(`(async () => {
+    const countBefore = window.ClinicDesk.getEventsCache().length;
+    window.ClinicViews.showView('settings');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const originalConfirm = window.confirm;
+    window.confirm = () => true;
+    document.querySelector('#clear-local').click();
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const status = document.querySelector('#settings-status').textContent.trim();
+      if (window.ClinicDesk.getEventsCache().length === 0 && status && !document.querySelector('#clear-local').disabled) break;
+    }
+    window.confirm = originalConfirm;
+    return {
+      countBefore,
+      countAfter: window.ClinicDesk.getEventsCache().length,
+      status: document.querySelector('#settings-status').textContent.trim(),
+      metricsTotal: document.querySelector('#metric-total').textContent,
+      resultHidden: document.querySelector('#result-content').hidden,
+      stripHidden: document.querySelector('#emergency-strip').hidden,
+      buttonDisabled: document.querySelector('#clear-local').disabled,
+    };
+  })()`);
+  clearHistory.hiddenViolations = await hiddenViolations();
+  if (clearHistory.countBefore === 0 || clearHistory.countAfter !== 0 || clearHistory.metricsTotal !== '0'
+    || !clearHistory.resultHidden || !clearHistory.stripHidden || clearHistory.buttonDisabled
+    || !/cleared/i.test(clearHistory.status) || clearHistory.hiddenViolations.length) {
+    throw new Error(`Clearing history left stale state: ${JSON.stringify(clearHistory)}`);
   }
 
   const apiRequests = requests.filter(requestUrl => requestUrl.includes('/api/'));
@@ -445,6 +602,7 @@ async function main() {
     messageFocusScroll,
     triage,
     emergency,
+    emergencyNavigation,
     dashboard,
     queue,
     rulesLab,
@@ -453,7 +611,9 @@ async function main() {
     accessibility,
     simulator,
     command,
+    commandExample,
     identityFlow,
+    clearHistory,
     apiRequestCount: apiRequests.length,
     externalRequestCount: externalRequests.length,
     environmentInjectedRequestCount: environmentRequests.length,
@@ -473,8 +633,16 @@ async function main() {
   if (consoleErrors.length) throw new Error(`Console errors: ${consoleErrors.join(' | ')}`);
   if (pageExceptions.length) throw new Error(`Page exceptions: ${pageExceptions.join(' | ')}`);
   if (!triage.visible || triage.stages < 8 || !triage.studio) throw new Error('Triage pipeline did not render all stages.');
+  if (triage.emptyHidden !== true || triage.emptyDisplay !== 'none' || triage.skeletonHidden !== true || triage.skeletonDisplay !== 'none') {
+    throw new Error(`Triage left the empty state or skeleton rendered: ${JSON.stringify(triage)}`);
+  }
+  if (!/enquiry received/i.test(triage.auditText)) throw new Error(`The new enquiry is missing from its audit trail: ${triage.auditText}`);
   if (!emergency.locked || !emergency.stripVisible) throw new Error('Emergency gate did not lock the reply.');
+  if (initial.emergencyStripDisplay !== 'none') throw new Error('The zero-count emergency strip is still rendered at startup.');
   if (!dashboard.cards || dashboard.swimlanes < 4 || !dashboard.workloadBars) throw new Error('Dashboard did not render.');
+  if (!/awaiting acknowledgement/.test(dashboard.emergencyNote) || !/awaiting acknowledgement/.test(dashboard.heroEmergencyNote)) {
+    throw new Error(`Emergency metrics do not explain pending acknowledgements: ${JSON.stringify(dashboard)}`);
+  }
   if (!queue.rows) throw new Error('Queue did not render rows.');
   if (!rulesLab.gate.toLowerCase().includes('gate')) throw new Error('Rules Lab gate did not run.');
   if (!safety.metricCards || !safety.redteam) throw new Error('Safety Net did not render.');
@@ -483,6 +651,12 @@ async function main() {
   if (!command.keyboardFocus || !await evaluate('document.querySelector("#command-palette").hidden')) throw new Error('Keyboard palette open/focus/close check failed.');
   if (!sameViewScroll.preserved) throw new Error(`Selecting the active view moved the page: ${JSON.stringify(sameViewScroll)}`);
   if (!messageFocusScroll.focused || !messageFocusScroll.preserved) throw new Error(`Focusing the message field moved the page: ${JSON.stringify(messageFocusScroll)}`);
+  if (messageFocusScroll.viewEvents !== 0 || messageFocusScroll.view !== 'inbox') {
+    throw new Error(`Clicking or typing in the message field still triggered navigation: ${JSON.stringify(messageFocusScroll)}`);
+  }
+  if (!messageFocusScroll.value.includes('book an appointment') || messageFocusScroll.charCount !== '42 / 2,000') {
+    throw new Error(`Real browser typing did not update the message and counter: ${JSON.stringify(messageFocusScroll)}`);
+  }
 }
 
 try {

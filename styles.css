@@ -58,6 +58,10 @@
 }
 
 * { box-sizing: border-box; }
+/* The HTML hidden attribute must always win over component display rules.
+   Without this floor, flex/grid components such as the emergency strip and
+   skeleton remain visible while their .hidden property says otherwise. */
+[hidden] { display: none !important; }
 /* Keep browser-initiated focus scrolling predictable. Controls that intentionally
    animate navigation request smooth behaviour explicitly in JavaScript. */
 html { scroll-behavior: auto; }

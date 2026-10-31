@@ -430,8 +430,8 @@
     if (!window.ClinicDesk) throw new Error('The demo core has not loaded.');
     if (window.ClinicViews) window.ClinicViews.showView('inbox');
     const result = await window.ClinicDesk.createEnquiry(message);
-    window.ClinicDesk.showResult(result);
     await window.ClinicDesk.loadHistory();
+    window.ClinicDesk.showResult(result);
     const pipeline = $('#pipeline');
     if (pipeline) pipeline.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
     return result;
@@ -441,6 +441,19 @@
   function simDelay() {
     const speed = Number(($('#sim-speed') || {}).value) || 3;
     return Math.max(700, Math.round(11000 / speed));
+  }
+
+  function updateSimNext() {
+    const output = $('#sim-next');
+    if (!output) return;
+    const speed = Number(($('#sim-speed') || {}).value) || 3;
+    if (!simRunning) {
+      output.textContent = 'Next arrival: simulation stopped.';
+    } else if (simPaused) {
+      output.textContent = 'Next arrival: paused.';
+    } else {
+      output.textContent = `Next arrival: within about ${(simDelay() / 1000).toFixed(1)} s at ${speed}×. Arrival ${simIndex + 1} is next.`;
+    }
   }
 
   function updateSimButtons() {
@@ -456,6 +469,7 @@
     const output = $('#sim-speed-value');
     const speed = $('#sim-speed');
     if (output && speed) output.textContent = `${speed.value}×`;
+    updateSimNext();
   }
 
   async function simulationTick() {
@@ -465,6 +479,7 @@
     try {
       await window.ClinicDesk.createEnquiry(message);
       await window.ClinicDesk.loadHistory();
+      updateSimNext();
     } catch (error) {
       window.ClinicDesk.notify(`Simulation paused: ${error.message}`);
       stopSimulation();
@@ -550,6 +565,8 @@
             const approved = events.some(event => event.type === 'reply_approved' && event.id === match.id);
             if (window.ClinicViews) window.ClinicViews.showView('inbox');
             window.ClinicDesk.showResult({ ...enquiry, triggers: enquiry.triggers || enquiry.redFlags || [] }, approved);
+            const pipeline = $('#pipeline');
+            if (pipeline) pipeline.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
           },
         });
       }
@@ -650,10 +667,12 @@
   function fillMessage(message) {
     const input = $('#message');
     if (!input) return;
+    // A command-palette example must reveal the Inbox before touching its
+    // hidden input, otherwise the result appears to do nothing.
+    if (window.ClinicViews) window.ClinicViews.showView('inbox', { focus: '#message' });
     input.value = message;
     input.dispatchEvent(new Event('input'));
-    input.focus();
-    input.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
+    input.focus({ preventScroll: true });
   }
 
   // ---------- voice input ----------

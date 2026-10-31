@@ -93,7 +93,7 @@
 
       <div id="emergency-strip" class="emergency-strip global-emergency" role="alert" hidden>
         <svg class="icon"><use href="#i-alert"></use></svg>
-        <span><b id="emergency-strip-count">0</b> emergency phrase match(es) awaiting acknowledgement.</span>
+        <span><b id="emergency-strip-count">0</b> <span id="emergency-strip-label">emergency phrase matches awaiting acknowledgement.</span></span>
         <button class="button button-danger" id="emergency-strip-open" type="button">Open oldest</button>
       </div>
 
@@ -111,7 +111,7 @@
               </div>
               <div class="hero-stats" aria-label="Live queue summary">
                 <div class="hero-stat"><span>Queue</span><strong id="hero-queue">0</strong><small>awaiting approval</small></div>
-                <div class="hero-stat"><span>Emergency</span><strong id="hero-emergency">0</strong><small>phrase matches</small></div>
+                <div class="hero-stat"><span>Emergency flags</span><strong id="hero-emergency">0</strong><small id="hero-emergency-note">0 awaiting acknowledgement</small></div>
                 <div class="hero-stat"><span>SLA breaches</span><strong id="hero-sla">0</strong><small>computed</small></div>
                 <div class="hero-stat"><span>Eval recall</span><strong id="hero-recall">—</strong><small>synthetic set</small></div>
               </div>
@@ -227,13 +227,14 @@
           <div class="metrics-grid metrics-grid-8">
             <article class="metric"><span>TOTAL ENQUIRIES</span><strong id="metric-total">0</strong><small>in local history</small></article>
             <article class="metric"><span>NEEDS REVIEW</span><strong id="metric-review">0</strong><small>awaiting approval</small></article>
-            <article class="metric"><span>EMERGENCY FLAGS</span><strong id="metric-emergency">0</strong><small>phrase match · check now</small></article>
+            <article class="metric"><span>EMERGENCY FLAGS</span><strong id="metric-emergency">0</strong><small id="metric-emergency-note">0 awaiting acknowledgement</small></article>
             <article class="metric"><span>SLA BREACHES</span><strong id="metric-sla">0</strong><small>computed from timestamps</small></article>
             <article class="metric"><span>MEDIAN TTFP</span><strong id="metric-ttfp">—</strong><small>time to first approval</small></article>
             <article class="metric"><span>APPROVALS</span><strong id="metric-approvals">0</strong><small>human actions</small></article>
             <article class="metric"><span>REVIEW RATE</span><strong id="metric-review-rate">—</strong><small>prompt review + emergency</small></article>
             <article class="metric"><span>MEDIAN EMERGENCY ACK</span><strong id="metric-ack">—</strong><small>acknowledgement time</small></article>
           </div>
+          <p class="chart-note dashboard-metric-note">Emergency flags counts every phrase match in the local history. The red strip only appears for matches still awaiting acknowledgement.</p>
 
           <div class="dashboard-grid">
             <section class="panel swimlanes-panel" aria-labelledby="swimlanes-title">
@@ -309,7 +310,7 @@
               <p class="muted small">Seeded by time of day. Morning peak, lunch lull, afternoon wave and a rare emergency stream.</p>
               <div id="sim-pattern" class="sim-pattern" aria-label="Seeded arrival pattern"></div>
               <label class="sim-control" for="sim-speed">Speed <input id="sim-speed" type="range" min="1" max="10" value="3" step="1"><output id="sim-speed-value" for="sim-speed">3×</output></label>
-              <p class="chart-note" id="sim-next">Next arrival: —</p>
+              <p class="chart-note" id="sim-next">Next arrival: simulation stopped.</p>
             </section>
             <section class="panel">
               <h3>Staffing slider</h3>
@@ -449,7 +450,7 @@
 
         <section class="view" id="view-settings" data-view="settings" aria-labelledby="settings-title" hidden>
           <div class="section-heading">
-            <div><p class="eyebrow">SETTINGS</p><h2 id="settings-title">Local preferences</h2><p class="muted">Everything here is stored in this browser only. There is no account and no server sync.</p></div>
+            <div><p class="eyebrow">SETTINGS</p><h2 id="settings-title">Local preferences</h2><p class="muted">Everything here stays on this device: browser storage in static mode, or the local Node data file in server mode. There is no account and no cloud sync.</p></div>
           </div>
           <div class="settings-grid">
             <section class="panel">
@@ -462,7 +463,7 @@
               <h3>Demo controls</h3>
               <div class="settings-row"><div><b>Staff role for approvals</b><span>Used by the local permission check.</span></div><select id="staff-role" class="settings-select"><option>Receptionist</option><option>Practice Nurse</option><option>GP</option><option>Practice Manager</option></select></div>
               <div class="settings-row"><div><b>Onboarding hints</b><span>Show the first-visit cards again.</span></div><button class="button button-quiet" id="reset-onboarding" type="button">Show hints</button></div>
-              <div class="settings-row"><div><b>Local history</b><span>Remove every synthetic event from this browser.</span></div><button class="button button-danger-quiet" id="clear-local" type="button">Clear local data</button></div>
+              <div class="settings-row"><div><b>Local history</b><span>Remove every synthetic event from the active browser or local server store.</span></div><button class="button button-danger-quiet" id="clear-local" type="button">Clear history</button></div>
               <p class="chart-note" id="settings-status" role="status" aria-live="polite"></p>
             </section>
             <section class="panel">
@@ -506,7 +507,8 @@
       <dl class="shortcut-list">
         <div><dt><kbd>Ctrl</kbd> + <kbd>K</kbd></dt><dd>Command palette</dd></div>
         <div><dt><kbd>?</kbd></dt><dd>This shortcut list</dd></div>
-        <div><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Switch views</dd></div>
+        <div><dt><kbd>1</kbd>, <kbd>3</kbd>–<kbd>9</kbd></dt><dd>Switch views</dd></div>
+        <div><dt><kbd>2</kbd></dt><dd>Focus the intake message</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Close dialogs</dd></div>
         <div><dt><kbd>Tab</kbd></dt><dd>Move through controls</dd></div>
       </dl>

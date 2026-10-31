@@ -183,6 +183,13 @@ function handleApi(request, response, pathname) {
     return;
   }
 
+  if (request.method === 'DELETE' && pathname === '/api/history') {
+    const removed = readEvents().length;
+    fs.rmSync(eventFile, { force: true });
+    sendJson(response, 200, { cleared: true, removed });
+    return;
+  }
+
   if (request.method === 'POST' && pathname === '/api/enquiries') {
     readJson(request).then(({ message }) => {
       if (typeof message !== 'string' || !message.trim() || message.length > 2000) {

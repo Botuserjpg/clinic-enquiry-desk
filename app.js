@@ -15,6 +15,7 @@
   const ROLE_KEY = 'clinicStaffRole';
   const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let memoryEvents = [];
+  let staticWriteQueue = Promise.resolve();
   let toastTimer;
   let stageTimer;
   let stageEls = [];
@@ -136,15 +137,22 @@
     }
   }
 
-  async function appendStaticEvent(event) {
-    const events = loadStaticEvents();
-    const previousHash = events.length ? events[events.length - 1].hash : 'GENESIS';
-    const content = { ...event, previousHash, timestamp: new Date().toISOString() };
-    const hash = await hashText(previousHash + JSON.stringify(content));
-    const stored = { ...content, hash };
-    events.push(stored);
-    saveStaticEvents(events);
-    return stored;
+  function appendStaticEvent(event) {
+    // Hash calculation is asynchronous. Serialise the whole read-hash-write
+    // cycle so two rapid submissions cannot both read the same history and
+    // overwrite each other's event.
+    const write = staticWriteQueue.then(async () => {
+      const events = loadStaticEvents();
+      const previousHash = events.length ? events[events.length - 1].hash : 'GENESIS';
+      const content = { ...event, previousHash, timestamp: new Date().toISOString() };
+      const hash = await hashText(previousHash + JSON.stringify(content));
+      const stored = { ...content, hash };
+      events.push(stored);
+      saveStaticEvents(events);
+      return stored;
+    });
+    staticWriteQueue = write.catch(() => {});
+    return write;
   }
 
   async function getEvents() {
@@ -245,12 +253,26 @@
     return events.some(event => event.type === 'emergency_acknowledged' && event.id === id);
   }
 
+  function trueMedian(sortedValues) {
+    if (!sortedValues.length) return null;
+    const middle = Math.floor(sortedValues.length / 2);
+    return sortedValues.length % 2
+      ? sortedValues[middle]
+      : (sortedValues[middle - 1] + sortedValues[middle]) / 2;
+  }
+
   function computeMetrics(events) {
     const received = events.filter(event => event.type === 'enquiry_received');
     const approvals = events.filter(event => event.type === 'reply_approved');
     const approvedIds = new Set(approvals.map(event => event.id));
     const ackedIds = new Set(events.filter(event => event.type === 'emergency_acknowledged').map(event => event.id));
-    const pending = received.filter(event => !approvedIds.has(event.id));
+    const statusById = new Map();
+    for (const event of events) {
+      if (event.type === 'status_changed' && event.id) statusById.set(event.id, event.status);
+    }
+    // Done enquiries are filed, so they leave the needs-review queue even when
+    // no reply was approved. Approval remains a separate audit fact.
+    const pending = received.filter(event => !approvedIds.has(event.id) && statusById.get(event.id) !== 'done');
     const now = Date.now();
     const overdue = pending.filter(event => Number.isFinite(event.slaMinutes) && event.slaMinutes > 0 && event.timestamp && now > new Date(event.timestamp).getTime() + event.slaMinutes * 60000);
     const emergencyPending = received.filter(event => event.emergency && !ackedIds.has(event.id));
@@ -259,13 +281,13 @@
       if (!enquiry || !enquiry.timestamp) return null;
       return new Date(approval.timestamp).getTime() - new Date(enquiry.timestamp).getTime();
     }).filter(value => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
-    const median = times.length ? times[Math.floor((times.length - 1) / 2)] : null;
+    const median = trueMedian(times);
     const ackTimes = events.filter(event => event.type === 'emergency_acknowledged').map(event => {
       const enquiry = received.find(item => item.id === event.id);
       if (!enquiry || !enquiry.timestamp) return null;
       return new Date(event.timestamp).getTime() - new Date(enquiry.timestamp).getTime();
     }).filter(value => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
-    const medianAck = ackTimes.length ? ackTimes[Math.floor((ackTimes.length - 1) / 2)] : null;
+    const medianAck = trueMedian(ackTimes);
     const reviewRows = received.filter(event => event.priority === 'Prompt review' || event.emergency);
     return {
       total: received.length,
@@ -303,10 +325,18 @@
     setText('#metric-review-rate', metrics.reviewRate === null ? '—' : `${(metrics.reviewRate * 100).toFixed(1)}%`);
     setText('#metric-ack', metrics.medianAck === null ? '—' : formatDuration(metrics.medianAck));
 
+    const pendingEmergencyText = `${metrics.emergencyPending.toLocaleString('en-AU')} awaiting acknowledgement`;
+    setText('#metric-emergency-note', pendingEmergencyText);
+    setText('#hero-emergency-note', pendingEmergencyText);
+
     const strip = $('#emergency-strip');
     if (strip) {
       strip.hidden = metrics.emergencyPending === 0;
       setText('#emergency-strip-count', metrics.emergencyPending.toLocaleString('en-AU'));
+      setText('#emergency-strip-label', metrics.emergencyPending === 1
+        ? 'emergency phrase match awaiting acknowledgement.'
+        : 'emergency phrase matches awaiting acknowledgement.');
+      strip.title = 'Only unacknowledged emergency matches appear here. Historical match totals are shown on the Dashboard.';
     }
     document.dispatchEvent(new CustomEvent('clinic:updated', { detail: { events: stateEvents(), metrics, isStatic } }));
   }
@@ -436,7 +466,14 @@
     if (skeleton) skeleton.hidden = true;
   }
 
-  function clearLocalData() {
+  async function clearLocalData() {
+    if (isStatic) {
+      // Do not clear in the middle of an in-flight append. Without this wait,
+      // an event already being hashed could be written back after the reset.
+      await staticWriteQueue;
+    } else {
+      await request('/api/history', { method: 'DELETE' });
+    }
     memoryEvents = [];
     cachedEvents = [];
     tamperIndex = null;
@@ -449,7 +486,10 @@
     renderHistory([]);
     renderIntegrityChain([]);
     updateMetrics(computeMetrics([]));
-    notify('Local synthetic history cleared from this browser.');
+    notify(isStatic
+      ? 'Local synthetic history cleared from this browser.'
+      : 'Synthetic history cleared from the local server data file.');
+    return isStatic ? 'browser' : 'server';
   }
 
   function faqAnswer(message) {
@@ -1398,8 +1438,10 @@
                 body: JSON.stringify({ approvedBy, staffRole: role, replyText: value, tone: toneSelect.value, channel: channelSelect.value, faqId: faqMatch && faqMatch.best ? faqMatch.best.entry.id : null, slotId }),
               });
             }
-            showResult(result, true);
+            // Refresh the audit chain before rendering the approved state so the
+            // approval event is included in the visible audit trail.
             await loadHistory();
+            showResult(result, true);
             notify(slotId ? 'Approval recorded and the selected synthetic slot is booked. Nothing was sent.' : 'Approval recorded. The draft has not been sent.');
           } catch (error) {
             notify(error.message);
@@ -1465,6 +1507,7 @@
       notify('No emergency phrase match is awaiting acknowledgement.');
       return;
     }
+    if (window.ClinicViews) window.ClinicViews.showView('inbox');
     const approved = events.some(event => event.type === 'reply_approved' && event.id === emergency.id);
     showResult({ ...emergency, triggers: emergency.redFlags }, approved);
     const pipeline = $('#pipeline');
@@ -1485,26 +1528,9 @@
     if (messageInput) messageInput.setAttribute('aria-invalid', text ? 'true' : 'false');
   }
   if (messageInput) {
-    let pointerScrollPosition = null;
-    messageInput.addEventListener('pointerdown', () => {
-      pointerScrollPosition = window.scrollY;
-    }, { passive: true });
-    messageInput.addEventListener('blur', () => { pointerScrollPosition = null; });
-    const restoreMessagePointerPosition = () => {
-      if (pointerScrollPosition === null) return;
-      const beforeFocus = pointerScrollPosition;
-      pointerScrollPosition = null;
-      requestAnimationFrame(() => {
-        if (document.activeElement !== messageInput || Math.abs(window.scrollY - beforeFocus) < 2) return;
-        const root = document.documentElement;
-        const previousBehaviour = root.style.scrollBehavior;
-        root.style.scrollBehavior = 'auto';
-        window.scrollTo({ top: beforeFocus, behavior: 'instant' });
-        root.style.scrollBehavior = previousBehaviour;
-      });
-    };
-    messageInput.addEventListener('focus', restoreMessagePointerPosition);
-    messageInput.addEventListener('pointerup', restoreMessagePointerPosition);
+    // Navigation binding lives on real controls, not the view container, so a
+    // click or paste in the textarea no longer triggers showView(). Native
+    // focus keeps the current scroll position without a restore workaround.
     messageInput.addEventListener('input', () => {
       setText('#char-count', `${messageInput.value.length.toLocaleString('en-AU')} / 2,000`);
       if (messageInput.value.trim()) setMessageError('');
@@ -1557,8 +1583,10 @@
       if (skeleton) skeleton.hidden = false;
       try {
         const result = await createEnquiry(value);
-        showResult(result);
+        // Load the new event before rendering so the visible audit trail
+        // includes the enquiry that was just received.
         await loadHistory();
+        showResult(result);
         notify(result.emergency ? 'Emergency wording flagged. Relay the 000 instruction now.' : 'Enquiry triaged and saved to the local history.');
       } catch (error) {
         notify(error.message);
@@ -1593,6 +1621,8 @@
     hashText,
     appendStaticEvent,
     loadStaticEvents,
+    computeMetrics,
+    trueMedian,
     getMetrics: () => latestMetrics,
     getEventsCache: () => cachedEvents.slice(),
     getCurrentResult: () => currentResult,

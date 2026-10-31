@@ -75,7 +75,10 @@
   }
 
   function setupNavigation() {
-    $$('[data-view]').forEach(element => {
+    // Only bind tangible navigation controls. A view section also carries
+    // data-view for its identity; binding it turned every click inside the
+    // Inbox (including the message textarea) into a navigation event.
+    $$('[data-view]:not(.view)').forEach(element => {
       element.addEventListener('click', event => {
         if (element.tagName === 'A') event.preventDefault();
         showView(element.dataset.view, { focus: element.dataset.focus });
@@ -147,9 +150,14 @@
         const modal = $('#shortcuts-modal');
         if (modal && !modal.hidden) closeShortcuts();
       } else if (/^[1-9]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        const names = ['inbox', 'inbox', 'queue', 'dashboard', 'simulator', 'rules', 'safety', 'prompt', 'settings'];
+        const names = ['inbox', null, 'queue', 'dashboard', 'simulator', 'rules', 'safety', 'prompt', 'settings'];
         const name = names[Number(event.key) - 1];
-        if (name) {
+        if (event.key === '2') {
+          // The sidebar labels this shortcut Triage, so it must do more than
+          // open Inbox: move focus to the intake message.
+          event.preventDefault();
+          showView('inbox', { focus: '#message' });
+        } else if (name) {
           event.preventDefault();
           showView(name);
         }
@@ -203,7 +211,7 @@
       if (filter === 'open') return status !== 'done';
       if (filter === 'done') return status === 'done';
       if (filter === 'emergency') return event.emergency;
-      if (filter === 'review') return event.priority === 'Prompt review' || event.emergency;
+      if (filter === 'review') return status !== 'done' && (event.priority === 'Prompt review' || event.emergency);
       return true;
     }).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 
@@ -346,10 +354,20 @@
     });
 
     const clear = $('#clear-local');
-    if (clear) clear.addEventListener('click', () => {
-      if (!window.confirm('Remove every synthetic event from this browser? This cannot be undone.')) return;
-      if (window.ClinicDesk) window.ClinicDesk.clearLocalData();
-      setText('#settings-status', 'Local history cleared.');
+    if (clear) clear.addEventListener('click', async () => {
+      if (!window.confirm('Remove every synthetic event from the local history? This cannot be undone.')) return;
+      if (!window.ClinicDesk) return;
+      clear.disabled = true;
+      try {
+        const cleared = await window.ClinicDesk.clearLocalData();
+        setText('#settings-status', cleared === 'server'
+          ? 'Server history cleared from the local data file.'
+          : 'Browser history cleared from local storage.');
+      } catch (error) {
+        setText('#settings-status', `History was not cleared: ${error.message}`);
+      } finally {
+        clear.disabled = false;
+      }
     });
 
     const helplines = $('#helpline-list');

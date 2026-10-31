@@ -222,10 +222,13 @@ test('staff identity is captured inline with accessible validation, not browser 
 
 test('clearing local history resets the visible result and keeps saved rules', () => {
   const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const views = fs.readFileSync(path.join(root, 'views.js'), 'utf8');
   assert.match(app, /function resetResult\(\)/);
   assert.match(app, /resetResult\(\);\s+renderHistory\(\[\]\)/);
   assert.doesNotMatch(app, /removeItem\(RULES_KEY\)/, 'saved Rules Lab overrides are a separate setting');
   assert.match(app, /Lab override is a separate setting/);
+  assert.match(app, /request\('\/api\/history', \{ method: 'DELETE' \}\)/, 'server mode must clear the server history, not just browser storage');
+  assert.match(views, /await window\.ClinicDesk\.clearLocalData\(\)/, 'the settings status must wait for the clear operation');
 });
 
 test('reply studio helpers block medical advice, score readability and diff edits', () => {
@@ -304,7 +307,8 @@ test('message focus and same-view navigation preserve the typing position', () =
     addEventListener() {},
     dispatchEvent() {},
   };
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'views.js'), 'utf8'), {
+  const viewsSource = fs.readFileSync(path.join(root, 'views.js'), 'utf8');
+  vm.runInNewContext(viewsSource, {
     window: windowMock,
     document: documentMock,
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
@@ -313,12 +317,84 @@ test('message focus and same-view navigation preserve the typing position', () =
   assert.equal(windowMock.scrolls.length, 0, 'reselecting Inbox should preserve the typing position');
   windowMock.ClinicViews.showView('queue');
   assert.equal(windowMock.scrolls.length, 1, 'switching to a different view should reset its position');
+
+  // Regression for the real scroll-jump cause: data-view on a view section
+  // turned every click in the Inbox into navigation. Bind only real controls.
+  assert.match(viewsSource, /\[data-view\]:not\(\.view\)/);
+  assert.match(viewsSource, /if \(event\.key === '2'\)/);
+  assert.match(viewsSource, /showView\('inbox', \{ focus: '#message' \}\)/);
+
   const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
-  assert.match(appSource, /messageInput\.addEventListener\('pointerdown'/);
-  assert.match(appSource, /messageInput\.addEventListener\('pointerup', restoreMessagePointerPosition\)/);
-  assert.match(appSource, /window\.scrollTo\(\{ top: beforeFocus, behavior: 'instant' \}\)/);
+  assert.doesNotMatch(appSource, /pointerScrollPosition/, 'native focus must not need a scroll-restoration workaround');
+  assert.doesNotMatch(appSource, /restoreMessagePointerPosition/);
+  assert.match(appSource, /messageInput\.addEventListener\('input'/);
   const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
   assert.match(css, /html\s*\{\s*scroll-behavior:\s*auto;/);
+  assert.match(css, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'hidden must override flex/grid component display rules');
+});
+
+test('metrics use a true median and remove done enquiries from needs-review', () => {
+  const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const start = source.indexOf('  function trueMedian(');
+  const end = source.indexOf('  function updateMetrics(', start);
+  assert.ok(start > 0 && end > start, 'metric functions are available for regression testing');
+  const { trueMedian, computeMetrics } = vm.runInNewContext(
+    `(() => {\n${source.slice(start, end)}\nreturn { trueMedian, computeMetrics };\n})()`,
+  );
+
+  assert.equal(trueMedian([1]), 1);
+  assert.equal(trueMedian([1, 3]), 2, 'an even set uses the midpoint, not the lower middle value');
+  assert.equal(trueMedian([1, 2, 9]), 2);
+  assert.equal(trueMedian([]), null);
+
+  const hourAgo = Date.now() - 60 * 60 * 1000;
+  const at = offset => new Date(hourAgo + offset).toISOString();
+  const events = [
+    { type: 'enquiry_received', id: 'DONE', category: 'General enquiry', priority: 'Routine', emergency: false, slaMinutes: 5, timestamp: at(0) },
+    { type: 'status_changed', id: 'DONE', status: 'done', timestamp: at(1000) },
+    { type: 'enquiry_received', id: 'OPEN', category: 'General enquiry', priority: 'Routine', emergency: false, slaMinutes: 5, timestamp: at(0) },
+    { type: 'enquiry_received', id: 'PENDING-EMERGENCY', category: 'Emergency', priority: 'Emergency wording', emergency: true, slaMinutes: 0, timestamp: at(0) },
+    { type: 'enquiry_received', id: 'APPROVED-1', category: 'General enquiry', priority: 'Routine', emergency: false, timestamp: at(0) },
+    { type: 'reply_approved', id: 'APPROVED-1', timestamp: at(2 * 60000) },
+    { type: 'enquiry_received', id: 'APPROVED-2', category: 'General enquiry', priority: 'Routine', emergency: false, timestamp: at(0) },
+    { type: 'reply_approved', id: 'APPROVED-2', timestamp: at(4 * 60000) },
+    { type: 'enquiry_received', id: 'ACKED-1', category: 'Emergency', priority: 'Emergency wording', emergency: true, timestamp: at(0) },
+    { type: 'emergency_acknowledged', id: 'ACKED-1', timestamp: at(2 * 60000) },
+    { type: 'status_changed', id: 'ACKED-1', status: 'done', timestamp: at(3 * 60000) },
+    { type: 'enquiry_received', id: 'ACKED-2', category: 'Emergency', priority: 'Emergency wording', emergency: true, timestamp: at(0) },
+    { type: 'emergency_acknowledged', id: 'ACKED-2', timestamp: at(4 * 60000) },
+    { type: 'status_changed', id: 'ACKED-2', status: 'done', timestamp: at(5 * 60000) },
+  ];
+  const metrics = computeMetrics(events);
+  assert.equal(metrics.review, 2, 'done enquiries leave needs-review even when no reply was approved');
+  assert.equal(metrics.slaBreaches, 1, 'done enquiries do not create a live SLA breach');
+  assert.equal(metrics.emergency, 3, 'historical emergency matches stay counted');
+  assert.equal(metrics.emergencyPending, 1, 'only unacknowledged matches are pending');
+  assert.equal(metrics.medianTtfp, 3 * 60000, 'approval median of 2 and 4 minutes is 3 minutes');
+  assert.equal(metrics.medianAck, 3 * 60000, 'acknowledgement median of 2 and 4 minutes is 3 minutes');
+  assert.equal(metrics.approvals, 2);
+});
+
+test('emergency copy distinguishes historical flags from acknowledgement pending', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(html, /id="emergency-strip-label"/);
+  assert.match(html, /id="metric-emergency-note"/);
+  assert.match(html, /id="hero-emergency-note"/);
+  assert.doesNotMatch(html, /match\(es\)/, 'the strip must not use ambiguous plural notation');
+  assert.match(html, /still awaiting acknowledgement/);
+  assert.match(app, /emergencyPending === 1/);
+  assert.match(app, /strip\.title = 'Only unacknowledged emergency matches appear here/);
+});
+
+test('static appends are serialized and the sim-next guidance is updated', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const mission = fs.readFileSync(path.join(root, 'mission.js'), 'utf8');
+  assert.match(app, /const write = staticWriteQueue\.then/);
+  assert.match(app, /staticWriteQueue = write\.catch/);
+  assert.match(mission, /function updateSimNext\(\)/);
+  assert.match(mission, /Next arrival: simulation stopped\./);
+  assert.match(mission, /showView\('inbox', \{ focus: '#message' \}\)/);
 });
 
 test('service worker refreshes same-origin assets and retains offline cache fallback', () => {
@@ -511,6 +587,21 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
     });
     assert.equal(malformedBody.status, 400);
     assert.deepEqual(await malformedBody.json(), { error: 'Please send valid JSON.' });
+
+    const crossOriginClear = await fetch(`${base}/api/history`, {
+      method: 'DELETE',
+      headers: { Origin: 'https://attacker.example' },
+    });
+    assert.equal(crossOriginClear.status, 403, 'cross-origin history deletion must be blocked');
+    const historyBeforeClear = await (await fetch(`${base}/api/history`)).json();
+    assert.ok(historyBeforeClear.length > 0);
+    const cleared = await fetch(`${base}/api/history`, { method: 'DELETE' });
+    assert.equal(cleared.status, 200);
+    assert.deepEqual(await cleared.json(), { cleared: true, removed: historyBeforeClear.length });
+    assert.deepEqual(await (await fetch(`${base}/api/history`)).json(), []);
+    const clearedAgain = await fetch(`${base}/api/history`, { method: 'DELETE' });
+    assert.equal(clearedAgain.status, 200);
+    assert.deepEqual(await clearedAgain.json(), { cleared: true, removed: 0 });
 
     const traversal = await fetch(`${base}/%2e%2e%2fpackage.json`);
     assert.equal(traversal.status, 403);
