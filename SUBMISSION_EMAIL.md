@@ -21,7 +21,7 @@ Verification from the final working session:
 - `npm test`: 28/28 passed (last local audit).
 - `python -m pytest -q`: 27 passed, 12 subtests passed.
 - Evaluation: 1,500 synthetic rows; 91.87% exact category-and-priority accuracy (95% bootstrap CI 90.4%–93.2%); emergency recall 232/232 (100%); 50 emergency false positives.
-- Final headless Chrome checks on a fresh copy covered static root, GitHub-style subpath, `file://`, and server mode. Static modes made zero `/api/` requests; all modes had zero unexpected external requests, console errors or page exceptions. All seven Trust Center checks passed.
+- Latest headless Chrome checks covered static root, GitHub-style subpath, `file://`, server mode and the live GitHub Pages URL. Static modes and the live build made zero `/api/` requests; all runs had zero unexpected external requests, console errors or page exceptions. All seven Trust Center checks passed.
 
 These are fixture-level rule-consistency results, not clinical validation. The prototype is a synthetic demonstration and must not be used with real patient information. The README, safety case and limits page describe the constraints honestly.
 
