@@ -51,3 +51,13 @@ The three lists above record the state found during the initial audit. The follo
 
 Published to <https://github.com/Botuserjpg/clinic-enquiry-desk> with GitHub Pages enabled at <https://botuserjpg.github.io/clinic-enquiry-desk/>. Still owner work: answer the reflections, supply the verbatim prompt history, record the 2+ minute video, check the live page in an incognito window, and send the submission email.
 
+## Current status — 31 October 2026
+
+The lists above are the original audit history. Current verified state after the Max-upgrade audit:
+
+- **Code and tests:** all 21 JavaScript/ES module files pass `node --check`; `npm test` passes **28/28**; `python -m unittest discover -s tests -v` passes **27/27**; `python -m pytest -q` passes **27 tests plus 12 subtests**.
+- **Evaluation:** 1,500 synthetic rows, seed `20261030`; exact category+priority **91.87%**, category **95.6%**, priority **92.93%**, emergency recall **232/232 (100%)**, **50** emergency false positives, review rate **40.8%**. Latest local Python latency is **48.27 ms** for the full set (**0.0322 ms per message**); repeated runs measured **42.98–81.43 ms** and timings vary. The generated report is `docs/evaluation_report.md`.
+- **Browser verification:** fresh headless Chrome runs passed static root, GitHub-style subpath, `file://` and Node server mode. Static modes made **0** API requests; all modes had **0** unexpected external requests, console errors or page exceptions. The inline staff-name acknowledgement/approval flow passed in all four modes. Server mode made **25** same-origin API calls. Evidence is in `docs/browser_check_current_*.json`; screenshots are refreshed.
+- **Fixed in this audit:** exact server-side emergency template, export approval joins, inline staff-name validation, clear-history behaviour, Rules Lab active baseline, brand anchor and switch names, Docker `HOST` binding, queue truncation notice, and the cleaned `WHATS_NEW.md`. Details are in `BUILD_LOG.md` and `docs/FINAL_AUDIT.md`.
+- **Not verified:** the Docker image could not be built because Docker is not installed on this machine; the `HOST` fix is source-level and test-covered. The live Pages deployment still needs a final post-push check.
+- **Owner work still open:** save prompt 04, add the factual prompt row, write owner reflections, supply the original prompt history, record the personal video, run the incognito check, and send the email to `jobs@gokulinfocare.com`. No shipped text invents these.

@@ -1,5 +1,7 @@
 # Final round state audit
 
+> Historical snapshot from an earlier round. Current verified state is in `HANDOFF_STATE.md`, `docs/FINAL_AUDIT.md` and `continue.pdf`.
+
 ## ALREADY DONE (verified how)
 
 - UI and core flows: inspected `index.html`, `app.js`, `mission.js`, `views.js`, `extras.js`, `faq.js`, and `ruleslab.js`; existing code covers themes, navigation, palette, shortcuts, toasts/undo, pipeline, counterfactuals, gated Rules Lab, FAQ, calendar slots, reply studio, emergency acknowledgement, server permissions, dashboard, simulator, exports, handover, read-aloud and PWA.

@@ -54,7 +54,7 @@ The page is designed to be useful in the first 10 seconds: product identity, liv
 | --- | --- |
 | ![Trust Center self-tests](docs/screenshots/07-safety-net.png) | ![Clinic-day simulator](docs/screenshots/08-simulator.png) |
 
-These eight real screenshots were captured with headless Edge from the final static build. The Trust Center screenshot shows the actual in-browser PASS results.
+These eight real screenshots were captured with headless Chrome from the final static build. The Trust Center screenshot shows the actual in-browser PASS results.
 
 ## Two modes, one codebase
 
@@ -157,11 +157,11 @@ python -m pytest -q
 Current results (recorded from real runs in the final working session):
 
 - `node --check` on every project JavaScript file: **all passed**.
-- `npm test`: **26/26 passed** (last local audit).
-- `python -m unittest discover -s tests -v`: **23/23 passed**.
-- `python -m pytest -q`: **23 passed, 12 subtests passed**.
-- Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
-- Final headless Edge checks on a fresh temporary copy passed static root, GitHub-style subpath, `file://`, and server mode. Static modes recorded **zero `/api/` calls** and all modes had **zero unexpected external requests, console errors or page exceptions**. All seven Trust Center checks passed; the Rules Lab displayed its full 1,500-row result.
+- `npm test`: **28/28 passed** (last local audit).
+- `python -m unittest discover -s tests -v`: **27/27 passed**.
+- `python -m pytest -q`: **27 passed, 12 subtests passed**.
+- Evaluation on 1,500 synthetic enquiries (seed 20261030): **91.87%** exact category-and-priority accuracy (95% bootstrap CI **90.4%–93.2%**); emergency recall **232/232 (100%)**; **50** emergency false positives. Latest Python latency: **48.27 ms** for the full set (**0.0322 ms per message**); repeated runs measured **42.98–81.43 ms**, and timings vary. Full category/group results, confusion matrix and latency are in [the report](docs/evaluation_report.md).
+- Latest headless Chrome checks passed static root, GitHub-style subpath, `file://`, and server mode. Static modes recorded **zero `/api/` calls** and all modes had **zero unexpected external requests, console errors or page exceptions**. All seven Trust Center checks passed; the inline staff-name acknowledgement/approval flow passed; the Rules Lab displayed its full 1,500-row result. Server mode made **25** same-origin API calls.
 - These are rule-consistency results on fictional examples, **not** clinical validation or evidence of real-world safety.
 
 ## Documentation

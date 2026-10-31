@@ -1,5 +1,7 @@
 # Round 2 state audit
 
+> Historical snapshot from an earlier round. Current verified state is in `HANDOFF_STATE.md`, `docs/FINAL_AUDIT.md` and `continue.pdf`.
+
 ## ALREADY DONE (verified how)
 
 - A through most of B: inspected the workspace UI and modules (`index.html`, `app.js`, `views.js`, `extras.js`, `faq.js`, `ruleslab.js`). Dark/light themes, keyboard palette, responsive shell, auto-demo, explainable pipeline, counterfactuals, gated Rules Lab, FAQ citations, appointments, complaint/language handling and reply studio are present.
