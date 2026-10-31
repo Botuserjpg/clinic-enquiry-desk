@@ -176,7 +176,12 @@
   }
 
   function init() {
-    baselineRules = clone(window.CLINIC_RULES || {});
+    // Prefer the rules actually active in the app, including a saved local
+    // override. The authored bundle is only a fallback.
+    const activeRules = window.ClinicDesk && window.ClinicDesk.rules
+      ? window.ClinicDesk.rules
+      : window.CLINIC_RULES;
+    baselineRules = clone(activeRules || {});
     if (!baselineRules.redFlags) return;
     renderDraft(baselineRules);
     const run = $('#rules-run');
@@ -187,7 +192,6 @@
     if (exportButton) exportButton.addEventListener('click', exportRules);
     const reset = $('#rules-reset');
     if (reset) reset.addEventListener('click', () => {
-      baselineRules = clone(window.CLINIC_RULES || baselineRules);
       renderDraft(baselineRules);
       runCheck();
       if (window.ClinicDesk) window.ClinicDesk.notify('Rules draft reset to the active rules.');

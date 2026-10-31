@@ -182,6 +182,55 @@ class AssetAndDocumentationTests(unittest.TestCase):
             self.assertIsNone(re.search(r"\bsk-[A-Za-z0-9]{20,}", text), relative)
             self.assertIsNone(re.search(r"api[_-]?key\s*[:=]\s*['\"][A-Za-z0-9]{16,}", text, re.IGNORECASE), relative)
 
+    def test_whats_new_is_clean_utf8_with_one_top_level_heading(self):
+        text = (ROOT / "WHATS_NEW.md").read_text(encoding="utf-8")
+        self.assertFalse(text.startswith("\ufeff"), "WHATS_NEW.md has no leading BOM")
+        self.assertEqual(text.count("\ufeff"), 0)
+        self.assertEqual(text.count("\ufffd"), 0)
+        for corrupted in ("â€™", "â€“", "â€”", "â€œ", "â€\x9d", "â†’", "â€¦", "Â·", "Ã©"):
+            self.assertNotIn(corrupted, text)
+        first_line = text.lstrip().splitlines()[0]
+        self.assertEqual(first_line, "# What's new in Clinic Mission Control")
+        self.assertIn("## The 14 things to look at first", text)
+        self.assertNotIn("The 12 things", text)
+        self.assertIn("48.27 ms", text)
+        self.assertIn("42.98", text)
+
+    def test_brand_link_and_switch_controls_have_valid_accessibility_targets(self):
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
+        ids = set(re.findall(r'\bid="([^"]+)"', html))
+        self.assertIn("view-inbox", ids)
+        self.assertIn('class="brand sidebar-brand" href="#view-inbox"', html)
+        self.assertNotIn('class="brand sidebar-brand" href="#inbox"', html)
+        for anchor in re.findall(r'<a\b[^>]*href="#([^"]+)"', html):
+            self.assertIn(anchor, ids, f"anchor target #{anchor} exists")
+        self.assertIn('id="reduced-motion-toggle" type="checkbox" aria-label="Reduce motion"', html)
+        self.assertIn('id="notifications-toggle" type="checkbox" aria-label="Browser notifications"', html)
+        for match in re.finditer(r'<label\b([^>]*)>', html):
+            if 'for=' not in match.group(1):
+                following = html[match.end():match.end() + 240]
+                self.assertRegex(following, r'aria-label="[^"]+"', "wrapped switch controls have an accessible name")
+
+    def test_docker_and_browser_documentation_match_the_current_runtime(self):
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("ENV HOST=0.0.0.0", dockerfile)
+        self.assertIn("EXPOSE 3000", dockerfile)
+        server = (ROOT / "server.js").read_text(encoding="utf-8")
+        self.assertIn("process.env.HOST", server)
+        self.assertIn("server.listen(port, host", server)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("headless Chrome", readme)
+        self.assertNotIn("headless Edge", readme)
+        submission = (ROOT / "SUBMISSION_EMAIL.md").read_text(encoding="utf-8")
+        self.assertNotIn("headless Edge", submission)
+
+    def test_queue_and_rules_lab_source_reflect_visible_behaviour(self):
+        views = (ROOT / "views.js").read_text(encoding="utf-8")
+        self.assertIn("Showing the 60 most recent", views)
+        self.assertIn("filtered.length > 60", views)
+        ruleslab = (ROOT / "ruleslab.js").read_text(encoding="utf-8")
+        self.assertIn("window.ClinicDesk.rules", ruleslab, "Rules Lab starts from the active rules")
+
 
 if __name__ == "__main__":
     unittest.main()

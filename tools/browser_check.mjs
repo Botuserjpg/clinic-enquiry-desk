@@ -225,6 +225,7 @@ async function main() {
       faq: Boolean(content.querySelector('.faq-box')),
       slots: content.querySelectorAll('.slot-option').length,
       studio: Boolean(content.querySelector('#reply-draft')),
+      approvalName: Boolean(content.querySelector('#approval-name')),
       audit: Boolean(content.querySelector('.enquiry-audit')),
     };
   })()`);
@@ -238,12 +239,14 @@ async function main() {
     for (let attempt = 0; attempt < 60; attempt += 1) {
       await new Promise(resolve => setTimeout(resolve, 100));
       const content = document.querySelector('#result-content');
-      if (content && !content.hidden && content.textContent.includes('Emergency')) break;
+      if (content && !content.hidden && content.textContent.includes('Emergency') && !document.querySelector('#emergency-strip').hidden) break;
     }
     const content = document.querySelector('#result-content');
     return {
       emergencyBox: Boolean(content.querySelector('.emergency-box, .emergency-call, .emergency')),
       locked: Boolean(content.querySelector('.ack-locked')),
+      ackName: Boolean(content.querySelector('#emergency-ack-name')),
+      ackError: Boolean(content.querySelector('#emergency-ack-error')),
       stripVisible: !document.querySelector('#emergency-strip').hidden,
       stripCount: (document.querySelector('#emergency-strip-count') || {}).textContent,
       text: content.textContent.slice(0, 500),
@@ -373,13 +376,67 @@ async function main() {
   await screenshot('09-command-palette.png');
   await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true`);
 
+  const identityFlow = await evaluate(`(async () => {
+    window.ClinicViews.showView('inbox');
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const ackButton = document.querySelector('.ack-row .button-approve');
+    const ackCheck = document.querySelector('#emergency-ack-check');
+    const ackName = document.querySelector('#emergency-ack-name');
+    ackCheck.click();
+    ackName.value = '';
+    ackName.dispatchEvent(new Event('input', { bubbles: true }));
+    ackButton.click();
+    await new Promise(resolve => setTimeout(resolve, 120));
+    const ackErrorShown = !document.querySelector('#emergency-ack-error').hidden;
+    const ackBlocked = !document.querySelector('.ack-row .review-note.approved');
+    ackName.value = 'Browser Check';
+    ackName.dispatchEvent(new Event('input', { bubbles: true }));
+    ackButton.click();
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (document.querySelector('.ack-row .review-note.approved')) break;
+    }
+    const ackRecorded = Boolean(document.querySelector('.ack-row .review-note.approved'));
+    const draftUnlocked = Boolean(document.querySelector('#reply-draft'));
+
+    const role = document.querySelector('#approval-role');
+    const approvalName = document.querySelector('#approval-name');
+    const approve = document.querySelector('.reply-actions .button-approve');
+    role.value = 'GP';
+    role.dispatchEvent(new Event('change', { bubbles: true }));
+    approvalName.value = '';
+    approvalName.dispatchEvent(new Event('input', { bubbles: true }));
+    approve.click();
+    await new Promise(resolve => setTimeout(resolve, 120));
+    const approvalErrorShown = !document.querySelector('#approval-name-error').hidden;
+    approvalName.value = 'Browser Check';
+    approvalName.dispatchEvent(new Event('input', { bubbles: true }));
+    approve.click();
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (document.querySelector('.reply-actions .review-note.approved')) break;
+    }
+    return {
+      ackErrorShown,
+      ackBlocked,
+      ackRecorded,
+      draftUnlocked,
+      approvalErrorShown,
+      approved: Boolean(document.querySelector('.reply-actions .review-note.approved')),
+    };
+  })()`);
+  if (!identityFlow.ackErrorShown || !identityFlow.ackBlocked || !identityFlow.ackRecorded
+    || !identityFlow.draftUnlocked || !identityFlow.approvalErrorShown || !identityFlow.approved) {
+    throw new Error(`Inline staff identity flow failed: ${JSON.stringify(identityFlow)}`);
+  }
+
   const apiRequests = requests.filter(requestUrl => requestUrl.includes('/api/'));
   const environmentRequests = requests.filter(isEnvironmentInjection);
   const externalRequests = requests.filter(requestUrl => /^https?:/.test(requestUrl)
     && !requestUrl.startsWith(new URL(url).origin)
     && !isEnvironmentInjection(requestUrl));
   const result = {
-    url,
+    url: url.startsWith('file:') ? 'file:///[redacted]/index.html' : url,
     serverMode,
     title: initial.title,
     mode: initial.mode,
@@ -396,6 +453,7 @@ async function main() {
     accessibility,
     simulator,
     command,
+    identityFlow,
     apiRequestCount: apiRequests.length,
     externalRequestCount: externalRequests.length,
     environmentInjectedRequestCount: environmentRequests.length,

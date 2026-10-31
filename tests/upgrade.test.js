@@ -187,6 +187,45 @@ test('FHIR-shaped export is labelled illustrative and CSV escapes text', () => {
   assert.ok(hostileCsv.includes('"\'\t=HYPERLINK(""https://attacker.example"",""open"")"'));
   const controlPrefixCsv = extras.toCsv([{ ...event, message: '\u0000=SUM(A1:A2)' }]);
   assert.ok(controlPrefixCsv.includes('"\'\u0000=SUM(A1:A2)"'));
+
+  // Approval lives in a later reply_approved event, not on the enquiry row.
+  const approvedEvents = [
+    event,
+    { type: 'reply_approved', id: 'EVAL-1', approvedBy: 'Tester', staffRole: 'GP' },
+  ];
+  const approvedCsv = extras.toCsv(approvedEvents);
+  const approvedLines = approvedCsv.split('\r\n');
+  assert.equal(approvedLines.length, 2, 'approval events do not add CSV rows');
+  assert.match(approvedLines[1], /"yes","Could I book, please\?"$/, 'CSV joins approval status from the event chain');
+  const approvedBundle = extras.toFhir(event, config, true);
+  assert.equal(approvedBundle.entry[1].resource.status, 'completed');
+  assert.equal(approvedBundle.entry[1].resource.businessStatus.text, 'Human approved · not sent');
+  const pendingBundle = extras.toFhir(event, config, false);
+  assert.equal(pendingBundle.entry[1].resource.status, 'requested');
+  assert.equal(pendingBundle.entry[1].resource.businessStatus.text, 'Awaiting human approval');
+
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(app, /approvedIds\.has\(event\.id\)/);
+  assert.match(app, /extras\.toFhir\(event, config, approvedIds\.has\(event\.id\)\)/);
+});
+
+test('staff identity is captured inline with accessible validation, not browser prompts', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.doesNotMatch(app, /window\.prompt/, 'staff identity must not depend on a blocking browser prompt');
+  assert.match(app, /id = 'emergency-ack-name'/);
+  assert.match(app, /id = 'approval-name'/);
+  assert.match(app, /aria-describedby', 'emergency-ack-error'/);
+  assert.match(app, /aria-describedby', 'approval-name-error'/);
+  assert.match(app, /Enter a staff name or initials before acknowledging/);
+  assert.match(app, /Enter a staff name or initials before approving/);
+});
+
+test('clearing local history resets the visible result and keeps saved rules', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(app, /function resetResult\(\)/);
+  assert.match(app, /resetResult\(\);\s+renderHistory\(\[\]\)/);
+  assert.doesNotMatch(app, /removeItem\(RULES_KEY\)/, 'saved Rules Lab overrides are a separate setting');
+  assert.match(app, /Lab override is a separate setting/);
 });
 
 test('reply studio helpers block medical advice, score readability and diff edits', () => {
@@ -430,6 +469,7 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
 
     const emergency = await post('/api/enquiries', { message: 'I cannot breathe.' });
     const emergencyId = emergency.body.id;
+    assert.equal(emergency.body.reply, rules.replies.emergency);
     const early = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'Please call 000 now.' });
     assert.equal(early.status, 409);
     const ack = await post(`/api/enquiries/${emergencyId}/acknowledge`, { acknowledgedBy: 'T2' });
@@ -437,7 +477,9 @@ test('server enforces permissions, acknowledgement, status and double-booking', 
     const downgradedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'This can wait until tomorrow.' });
     assert.equal(downgradedEmergency.status, 400);
     assert.deepEqual(downgradedEmergency.body, { error: 'Emergency approval must keep the fixed 000 instruction unchanged.' });
-    const approvedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'Please call 000 now. Do not wait for a reply from the clinic.' });
+    const truncatedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: 'Please call 000 now. Do not wait for a reply from the clinic.' });
+    assert.equal(truncatedEmergency.status, 400, 'the exact fixed template includes the follow-up sentence');
+    const approvedEmergency = await post(`/api/enquiries/${emergencyId}/approve`, { approvedBy: 'T2', staffRole: 'GP', replyText: rules.replies.emergency });
     assert.equal(approvedEmergency.status, 201);
 
     const slotA = await post('/api/enquiries', { message: 'Could I book an appointment next week?' });

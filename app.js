@@ -376,12 +376,15 @@
     try {
       const events = await getEvents();
       const received = events.filter(event => event.type === 'enquiry_received');
+      const approvedIds = new Set(
+        events.filter(event => event.type === 'reply_approved' && event.id).map(event => event.id),
+      );
       const bundle = {
         resourceType: 'Bundle',
         type: 'collection',
         timestamp: new Date().toISOString(),
         meta: { tag: [{ system: 'https://example.invalid/demo', code: 'illustrative-not-validated', display: 'Illustrative FHIR-shaped export; not validated' }] },
-        entry: received.flatMap(event => extras.toFhir(event, config).entry),
+        entry: received.flatMap(event => extras.toFhir(event, config, approvedIds.has(event.id)).entry),
       };
       downloadFile('clinic-enquiries-fhir-shaped.json', JSON.stringify(bundle, null, 2), 'application/json');
     } catch (error) {
@@ -417,13 +420,32 @@
     document.dispatchEvent(new CustomEvent('clinic:rules', { detail: { rules } }));
   }
 
+  function resetResult() {
+    currentResult = null;
+    currentApproved = false;
+    clearInterval(stageTimer);
+    stageEls = [];
+    stageIndex = 0;
+    if (resultContent) {
+      resultContent.hidden = true;
+      resultContent.replaceChildren();
+    }
+    if (emptyState) emptyState.hidden = false;
+    if (pipelineControls) pipelineControls.hidden = true;
+    const skeleton = $('#pipeline-skeleton');
+    if (skeleton) skeleton.hidden = true;
+  }
+
   function clearLocalData() {
     memoryEvents = [];
     cachedEvents = [];
+    tamperIndex = null;
     try {
       window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(RULES_KEY);
+      // "Clear local data" clears the synthetic event history. A saved Rules
+      // Lab override is a separate setting and stays until it is reset there.
     } catch { /* optional */ }
+    resetResult();
     renderHistory([]);
     renderIntegrityChain([]);
     updateMetrics(computeMetrics([]));
@@ -789,30 +811,65 @@
       done.textContent = 'Acknowledged by staff · recorded in the local history';
       ackRow.append(done);
     } else {
-      const label = document.createElement('label');
+      const checkboxLabel = document.createElement('label');
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.id = 'emergency-ack-check';
       const text = document.createElement('span');
       text.textContent = 'I have read the 000 instruction and will relay it now.';
-      label.append(checkbox, text);
+      checkboxLabel.append(checkbox, text);
+
+      const nameWrap = document.createElement('div');
+      nameWrap.className = 'staff-name-field';
+      const nameLabel = document.createElement('label');
+      nameLabel.htmlFor = 'emergency-ack-name';
+      nameLabel.textContent = 'Staff name or initials';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.id = 'emergency-ack-name';
+      nameInput.name = 'emergency-ack-name';
+      nameInput.maxLength = 60;
+      nameInput.autocomplete = 'off';
+      nameInput.required = true;
+      nameInput.setAttribute('aria-describedby', 'emergency-ack-error');
+      const nameError = document.createElement('span');
+      nameError.className = 'field-error';
+      nameError.id = 'emergency-ack-error';
+      nameError.setAttribute('role', 'alert');
+      nameError.hidden = true;
+      nameWrap.append(nameLabel, nameInput, nameError);
+
       const ackButton = document.createElement('button');
       ackButton.className = 'button button-approve';
       ackButton.type = 'button';
       ackButton.disabled = true;
       ackButton.textContent = 'Acknowledge emergency';
       checkbox.addEventListener('change', () => { ackButton.disabled = !checkbox.checked; });
+      nameInput.addEventListener('input', () => {
+        nameInput.removeAttribute('aria-invalid');
+        nameError.hidden = true;
+      });
       ackButton.addEventListener('click', async () => {
+        const acknowledgedBy = nameInput.value.trim();
+        if (!acknowledgedBy) {
+          nameInput.setAttribute('aria-invalid', 'true');
+          nameError.textContent = 'Enter a staff name or initials before acknowledging.';
+          nameError.hidden = false;
+          nameInput.focus();
+          return;
+        }
+        if (acknowledgedBy.length > 60) {
+          nameInput.setAttribute('aria-invalid', 'true');
+          nameError.textContent = 'Use 60 characters or fewer.';
+          nameError.hidden = false;
+          nameInput.focus();
+          return;
+        }
         ackButton.disabled = true;
         try {
-          const acknowledgedBy = window.prompt('Enter staff name or initials to record the emergency acknowledgement:');
-          if (!acknowledgedBy || !acknowledgedBy.trim()) {
-            ackButton.disabled = false;
-            return;
-          }
           if (isStatic) {
             if (!isAcknowledged(loadStaticEvents(), result.id)) {
-              await appendStaticEvent({ type: 'emergency_acknowledged', id: result.id, acknowledgedBy: acknowledgedBy.trim() });
+              await appendStaticEvent({ type: 'emergency_acknowledged', id: result.id, acknowledgedBy });
             }
           } else {
             await request(`/api/enquiries/${encodeURIComponent(result.id)}/acknowledge`, {
@@ -832,7 +889,7 @@
       const locked = document.createElement('span');
       locked.className = 'ack-locked';
       locked.textContent = 'Reply draft stays locked until this is acknowledged.';
-      ackRow.append(label, ackButton, locked);
+      ackRow.append(checkboxLabel, nameWrap, ackButton, locked);
     }
     box.append(kicker, call, copy, helplines, verifyHelplines, triggers, actions, ackRow);
     return box;
@@ -1197,7 +1254,34 @@
       roleSelect.disabled = approved;
       actions.append(roleSelect);
 
+      let approvedByName = null;
+      let approvedByError = null;
       if (!approved) {
+        const nameWrap = document.createElement('div');
+        nameWrap.className = 'staff-name-field';
+        const nameLabel = document.createElement('label');
+        nameLabel.htmlFor = 'approval-name';
+        nameLabel.textContent = 'Staff name or initials';
+        approvedByName = document.createElement('input');
+        approvedByName.type = 'text';
+        approvedByName.id = 'approval-name';
+        approvedByName.name = 'approval-name';
+        approvedByName.maxLength = 60;
+        approvedByName.autocomplete = 'off';
+        approvedByName.required = true;
+        approvedByName.setAttribute('aria-describedby', 'approval-name-error');
+        approvedByError = document.createElement('span');
+        approvedByError.className = 'field-error';
+        approvedByError.id = 'approval-name-error';
+        approvedByError.setAttribute('role', 'alert');
+        approvedByError.hidden = true;
+        nameWrap.append(nameLabel, approvedByName, approvedByError);
+        actions.append(nameWrap);
+        approvedByName.addEventListener('input', () => {
+          approvedByName.removeAttribute('aria-invalid');
+          approvedByError.hidden = true;
+        });
+
         approveButton = document.createElement('button');
         approveButton.className = 'button button-approve';
         approveButton.type = 'button';
@@ -1270,8 +1354,23 @@
             notify('That slot is already booked. Choose another slot or handle it manually.');
             return;
           }
-          const approvedBy = window.prompt('Enter staff name or initials to record approval:');
-          if (!approvedBy || !approvedBy.trim()) return;
+          const approvedBy = approvedByName ? approvedByName.value.trim() : '';
+          if (!approvedBy) {
+            if (approvedByName) {
+              approvedByName.setAttribute('aria-invalid', 'true');
+              approvedByError.textContent = 'Enter a staff name or initials before approving.';
+              approvedByError.hidden = false;
+              approvedByName.focus();
+            }
+            return;
+          }
+          if (approvedBy.length > 60) {
+            approvedByName.setAttribute('aria-invalid', 'true');
+            approvedByError.textContent = 'Use 60 characters or fewer.';
+            approvedByError.hidden = false;
+            approvedByName.focus();
+            return;
+          }
           approveButton.disabled = true;
           try {
             if (isStatic) {

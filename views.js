@@ -266,6 +266,12 @@
       row.append(time, main, actions);
       host.append(row);
     }
+    if (filtered.length > 60) {
+      const note = document.createElement('p');
+      note.className = 'chart-note queue-more';
+      note.textContent = `Showing the 60 most recent of ${filtered.length.toLocaleString('en-AU')} matching enquiries. Export CSV for the full local history.`;
+      host.append(note);
+    }
   }
 
   function setupQueue() {

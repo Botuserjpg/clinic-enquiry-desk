@@ -8,6 +8,7 @@ const { classify, routeEnquiry, maskSensitive } = require('./classifier');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '127.0.0.1';
 const MAX_BODY_BYTES = 20000;
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -43,7 +44,7 @@ const APPROVAL_ROLES = {
 };
 const STAFF_ROLES = ['Receptionist', 'Practice Nurse', 'GP', 'Practice Manager'];
 const STATUSES = ['open', 'done', 'snoozed'];
-const EMERGENCY_REPLY = 'Please call 000 now. Do not wait for a reply from the clinic.';
+const EMERGENCY_REPLY = rules.replies.emergency;
 
 function readEvents() {
   try {
@@ -393,7 +394,10 @@ if (require.main === module) {
       }
       process.exitCode = 1;
     });
-    server.listen(port, '127.0.0.1', () => console.log(`Clinic Enquiry Desk running at http://localhost:${port}`));
+    server.listen(port, host, () => {
+      const shownHost = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
+      console.log(`Clinic Enquiry Desk running at http://${shownHost}:${port}`);
+    });
   }
 }
 

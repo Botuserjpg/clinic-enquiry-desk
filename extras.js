@@ -215,8 +215,11 @@
     return matches;
   }
 
-  function toFhir(event, config) {
-    const approved = Boolean(event.approved);
+  function toFhir(event, config, approved) {
+    // Approval is an event in the audit chain, not a property of the original
+    // enquiry. Callers pass the joined boolean; the fallback keeps older
+    // imported fixtures readable.
+    const isApproved = approved === undefined ? Boolean(event.approved) : Boolean(approved);
     const priority = event.priority === 'Emergency wording' ? 'stat' : event.priority === 'Prompt review' ? 'urgent' : 'routine';
     return {
       resourceType: 'Bundle',
@@ -245,14 +248,14 @@
           resource: {
             resourceType: 'Task',
             id: `task-${event.id}`,
-            status: approved ? 'completed' : 'requested',
+            status: isApproved ? 'completed' : 'requested',
             intent: 'order',
             priority,
             description: `${event.category} · ${event.priority}`,
             for: { display: 'Synthetic patient (fictional)' },
             owner: { display: event.assignee || 'Receptionist' },
             authoredOn: event.timestamp,
-            businessStatus: { text: approved ? 'Human approved · not sent' : 'Awaiting human approval' },
+            businessStatus: { text: isApproved ? 'Human approved · not sent' : 'Awaiting human approval' },
           },
         },
       ],
@@ -261,7 +264,13 @@
 
   function toCsv(events) {
     const header = ['id', 'timestamp', 'category', 'priority', 'emergency', 'assignee', 'slaMinutes', 'approved', 'message'];
-    const rows = (events || []).filter(event => event.type === 'enquiry_received').map(event => [
+    const allEvents = Array.isArray(events) ? events : [];
+    const approvedIds = new Set(
+      allEvents
+        .filter(event => event && event.type === 'reply_approved' && event.id)
+        .map(event => event.id),
+    );
+    const rows = allEvents.filter(event => event && event.type === 'enquiry_received').map(event => [
       event.id,
       event.timestamp,
       event.category,
@@ -269,7 +278,7 @@
       event.emergency ? 'yes' : 'no',
       event.assignee,
       event.slaMinutes,
-      event.approved ? 'yes' : 'no',
+      approvedIds.has(event.id) || event.approved === true ? 'yes' : 'no',
       event.message,
     ]);
     const escape = value => {

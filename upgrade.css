@@ -124,6 +124,7 @@
 }
 .queue-row.emergency { border-color: color-mix(in srgb, var(--red) 42%, transparent); background: var(--red-soft); }
 .queue-row.done { opacity: 0.62; }
+.queue-more { margin: 10px 0 0; text-align: center; }
 .queue-time { color: var(--faint); font-family: var(--mono); font-size: 8.5px; }
 .queue-main { min-width: 0; }
 .queue-main b { font-size: 12px; }
